@@ -4998,7 +4998,8 @@ window.confirmSendOffer = async (studentId, studentName) => {
   else finalFee=Math.max(0,netFee-discVal);
 
   // Check existing pending offer for same course+student
-  const existing = await getDocs(query(collection(db,'specialOffers'),where('studentId','==',studentId),where('courseId','==',courseId),where('status','==','pending')));
+  const existingSnap = await getDocs(query(collection(db,'specialOffers'),where('studentId','==',studentId),where('courseId','==',courseId)));
+  const existing = {empty: !existingSnap.docs.some(d=>d.data().status==='pending'), docs: existingSnap.docs.filter(d=>d.data().status==='pending')};
   if(!existing.empty){
     if(!confirm('This student already has a pending offer for this course. Send a new one anyway?')) return;
     // Expire old ones
