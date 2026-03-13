@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <style>
 :root{--a:#6ee7b7;--a2:#818cf8;--a3:#f472b6;--warn:#fbbf24;--danger:#f87171;--bg:#020817;--card:rgba(15,23,42,0.85);--border:rgba(110,231,183,0.13);}
@@ -189,6 +190,10 @@ textarea.inp{resize:vertical;min-height:80px;}
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Online Exams
       </div>
       <div class="scat">Tools</div>
+      <div class="sl relative" onclick="showSec('admissions')">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        Admission Queries<span id="admissionsBadge" class="nbadge hidden">0</span>
+      </div>
       <div class="sl relative" onclick="showSec('notifications')">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
         Notifications<span id="notifBadge" class="nbadge hidden">0</span>
@@ -230,26 +235,145 @@ textarea.inp{resize:vertical;min-height:80px;}
 
       <!-- ═══════════ DASHBOARD ═══════════ -->
       <div id="sec-dashboard" class="sec active">
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-          <div class="sc"><div class="text-xs text-slate-500 mb-1">Teachers</div><div id="dTeachers" class="text-2xl font-display font-bold text-emerald-400">0</div></div>
-          <div class="sc"><div class="text-xs text-slate-500 mb-1">Students</div><div id="dStudents" class="text-2xl font-display font-bold text-indigo-400">0</div></div>
-          <div class="sc"><div class="text-xs text-slate-500 mb-1">Courses</div><div id="dCourses" class="text-2xl font-display font-bold text-pink-400">0</div></div>
-          <div class="sc"><div class="text-xs text-slate-500 mb-1">Exams</div><div id="dExams" class="text-2xl font-display font-bold text-indigo-400">0</div></div>
-          <div class="sc"><div class="text-xs text-slate-500 mb-1">Fee Collected</div><div id="dFees" class="text-xl font-display font-bold text-yellow-400 mono">₹0</div></div>
-          <div class="sc"><div class="text-xs text-slate-500 mb-1">Active Users</div><div id="dActive" class="text-2xl font-display font-bold text-emerald-400">0</div></div>
+        <!-- Greeting -->
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <h2 class="text-xl font-display font-bold text-white">Good <span id="dashGreeting">Morning</span>, Admin! 👋</h2>
+            <p class="text-slate-500 text-xs mt-0.5" id="dashDateLine"></p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl" style="background:rgba(110,231,183,0.08);border:1px solid rgba(110,231,183,0.2)">
+              <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+              <span class="text-emerald-400 text-xs font-semibold">System Live</span>
+            </div>
+            <div id="dashAdmissionAlert" class="hidden flex items-center gap-2 px-3 py-1.5 rounded-xl" style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25)">
+              <span class="text-yellow-400 text-xs font-semibold">⚡ <span id="dashNewLeadCount">0</span> New Leads</span>
+            </div>
+          </div>
         </div>
+
+        <!-- Primary Stats Row -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+          <div class="sc group cursor-pointer hover:scale-[1.02] transition-transform" onclick="showSec('teachers')">
+            <div class="text-2xl mb-1">👨‍🏫</div>
+            <div id="dTeachers" class="text-2xl font-display font-bold text-emerald-400">0</div>
+            <div class="text-xs text-slate-500">Teachers</div>
+          </div>
+          <div class="sc group cursor-pointer hover:scale-[1.02] transition-transform" onclick="showSec('students')">
+            <div class="text-2xl mb-1">🎓</div>
+            <div id="dStudents" class="text-2xl font-display font-bold text-indigo-400">0</div>
+            <div class="text-xs text-slate-500">Students</div>
+          </div>
+          <div class="sc group cursor-pointer hover:scale-[1.02] transition-transform" onclick="showSec('courses')">
+            <div class="text-2xl mb-1">📚</div>
+            <div id="dCourses" class="text-2xl font-display font-bold text-pink-400">0</div>
+            <div class="text-xs text-slate-500">Courses</div>
+          </div>
+          <div class="sc group cursor-pointer hover:scale-[1.02] transition-transform" onclick="showSec('batches')">
+            <div class="text-2xl mb-1">🏷️</div>
+            <div id="dBatches" class="text-2xl font-display font-bold text-sky-400">0</div>
+            <div class="text-xs text-slate-500">Batches</div>
+          </div>
+          <div class="sc group cursor-pointer hover:scale-[1.02] transition-transform" onclick="showSec('fees')">
+            <div class="text-2xl mb-1">💰</div>
+            <div id="dFees" class="text-xl font-display font-bold text-yellow-400 mono">₹0</div>
+            <div class="text-xs text-slate-500">Fee Collected</div>
+          </div>
+          <div class="sc group cursor-pointer hover:scale-[1.02] transition-transform" onclick="showSec('admissions')">
+            <div class="text-2xl mb-1">📋</div>
+            <div id="dAdmissions" class="text-2xl font-display font-bold text-orange-400">0</div>
+            <div class="text-xs text-slate-500">Leads</div>
+          </div>
+        </div>
+
+        <!-- KPI Metrics Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <div class="gc p-4">
+            <div class="text-xs text-slate-500 mb-1">Fee Pending</div>
+            <div id="dFeePending" class="text-xl font-display font-bold text-red-400 mono">₹0</div>
+            <div class="mt-2 h-1 rounded-full bg-red-400/10"><div id="dFeePendingBar" class="h-full rounded-full bg-red-400/50 transition-all" style="width:0%"></div></div>
+          </div>
+          <div class="gc p-4">
+            <div class="text-xs text-slate-500 mb-1">Collection Rate</div>
+            <div id="dFeeRate" class="text-xl font-display font-bold text-emerald-400">0%</div>
+            <div class="mt-2 h-1 rounded-full bg-emerald-400/10"><div id="dFeeRateBar" class="h-full rounded-full bg-emerald-400/50 transition-all" style="width:0%"></div></div>
+          </div>
+          <div class="gc p-4">
+            <div class="text-xs text-slate-500 mb-1">Active Exams</div>
+            <div id="dExams" class="text-xl font-display font-bold text-violet-400">0</div>
+            <div class="text-xs text-slate-600 mt-1">online MCQ exams</div>
+          </div>
+          <div class="gc p-4">
+            <div class="text-xs text-slate-500 mb-1">Active Users</div>
+            <div id="dActive" class="text-xl font-display font-bold text-emerald-400">0</div>
+            <div class="text-xs text-slate-600 mt-1">logged in users</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          <div class="gc p-5"><h3 class="text-sm font-semibold text-slate-300 mb-4">Users Breakdown</h3><canvas id="chartUsers" height="220"></canvas></div>
-          <div class="gc p-5 lg:col-span-2"><h3 class="text-sm font-semibold text-slate-300 mb-4">Monthly Fee Collection (₹)</h3><canvas id="chartFees" height="220"></canvas></div>
+          <div class="gc p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4">👥 Users Breakdown</h3>
+            <canvas id="chartUsers" height="180"></canvas>
+          </div>
+          <div class="gc p-5 lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-slate-300">💰 Monthly Fee Collection (₹)</h3>
+              <div id="dashFeeTotal" class="text-emerald-400 text-xs font-bold mono"></div>
+            </div>
+            <canvas id="chartFees" height="180"></canvas>
+          </div>
         </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+          <div class="gc p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4">📋 Admission Pipeline</h3>
+            <canvas id="chartAdmissions" height="180"></canvas>
+          </div>
+          <div class="gc p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4">📚 Enrollment by Course</h3>
+            <canvas id="chartEnrollments" height="180"></canvas>
+          </div>
+          <div class="gc p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4">✅ Fee Status</h3>
+            <canvas id="chartFeeStatus" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Bottom Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div class="gc p-5">
-            <h3 class="text-sm font-semibold text-slate-300 mb-4">Recent Registrations</h3>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-slate-300">🆕 Recent Registrations</h3>
+              <button onclick="showSec('students')" class="text-emerald-400 text-xs hover:text-emerald-300">View All →</button>
+            </div>
             <div id="recentReg" class="space-y-2"></div>
           </div>
           <div class="gc p-5">
-            <h3 class="text-sm font-semibold text-slate-300 mb-4">Fee Status Overview</h3>
-            <div id="feeStatusOverview" class="space-y-3"></div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-slate-300">⚡ Quick Actions</h3>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="showSec('students')" class="p-3 rounded-xl text-left transition-all hover:scale-[1.02]" style="background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.2)">
+                <div class="text-2xl mb-1">👤</div><div class="text-white text-xs font-semibold">Add Student</div>
+              </button>
+              <button onclick="showSec('teachers')" class="p-3 rounded-xl text-left transition-all hover:scale-[1.02]" style="background:rgba(110,231,183,0.1);border:1px solid rgba(110,231,183,0.2)">
+                <div class="text-2xl mb-1">👨‍🏫</div><div class="text-white text-xs font-semibold">Add Teacher</div>
+              </button>
+              <button onclick="showSec('fees')" class="p-3 rounded-xl text-left transition-all hover:scale-[1.02]" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2)">
+                <div class="text-2xl mb-1">💳</div><div class="text-white text-xs font-semibold">Record Fee</div>
+              </button>
+              <button onclick="showSec('admissions')" class="p-3 rounded-xl text-left transition-all hover:scale-[1.02]" style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.2)">
+                <div class="text-2xl mb-1">📥</div><div class="text-white text-xs font-semibold">View Leads</div>
+              </button>
+              <button onclick="showSec('batches')" class="p-3 rounded-xl text-left transition-all hover:scale-[1.02]" style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2)">
+                <div class="text-2xl mb-1">🏷️</div><div class="text-white text-xs font-semibold">Manage Batches</div>
+              </button>
+              <button onclick="showSec('certificates')" class="p-3 rounded-xl text-left transition-all hover:scale-[1.02]" style="background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.2)">
+                <div class="text-2xl mb-1">🏆</div><div class="text-white text-xs font-semibold">Certificates</div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -326,6 +450,7 @@ textarea.inp{resize:vertical;min-height:80px;}
           <button onclick="openAddStudent()" class="btn bp whitespace-nowrap">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>Add Student
           </button>
+          <button onclick="viewAllOffers()" class="btn whitespace-nowrap" style="background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25)">🎁 View Offers</button>
         </div>
         <div class="gc overflow-hidden">
           <div class="px-4 py-3 border-b border-emerald-400/8 flex items-center justify-between">
@@ -341,11 +466,32 @@ textarea.inp{resize:vertical;min-height:80px;}
 
       <!-- ═══════════ COURSES ═══════════ -->
       <div id="sec-courses" class="sec">
-        <div class="flex justify-end mb-4">
+        <div class="flex flex-wrap gap-3 mb-4">
+          <input id="courseSearchInput" oninput="filterAdminCourses()" class="inp flex-1" style="min-width:160px" placeholder="🔍 Search courses..."/>
+          <select id="courseCatFilter" class="inp w-auto" onchange="filterAdminCourses()">
+            <option value="">All Categories</option>
+            <option>Computer Basics</option><option>Office Tools</option><option>Programming</option>
+            <option>Web Development</option><option>Graphic Design</option><option>Accounting</option>
+            <option>Networking</option><option>Database</option><option>Other</option>
+          </select>
+          <select id="courseFeeFilter" class="inp w-auto" onchange="filterAdminCourses()">
+            <option value="">All Types</option>
+            <option value="free">🟢 Free</option>
+            <option value="paid">💰 Paid</option>
+          </select>
+          <select id="courseStatusFilter" class="inp w-auto" onchange="filterAdminCourses()">
+            <option value="">All Status</option>
+            <option value="active">✅ Active</option>
+            <option value="upcoming">🕐 Upcoming</option>
+            <option value="expired">⛔ Expired</option>
+            <option value="no-date">📅 No Date Set</option>
+          </select>
           <button onclick="openAddCourse()" class="btn bp">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>Add Course
           </button>
         </div>
+        <!-- Category Pills -->
+        <div id="adminCoursePills" class="flex flex-wrap gap-2 mb-4"></div>
         <div id="coursesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div class="gc p-6 text-center text-slate-600 col-span-full">Loading courses...</div>
         </div>
@@ -429,7 +575,8 @@ textarea.inp{resize:vertical;min-height:80px;}
             <option value="final">Final Exam</option>
             <option value="online">Online Exam</option>
           </select>
-          <button onclick="exportRankPDF()" class="btn bs whitespace-nowrap">Export PDF</button>
+          <button onclick="exportRankPDF()" class="btn bs whitespace-nowrap">📊 Export PDF</button>
+          <button onclick="openBulkMarksheets()" class="btn bp whitespace-nowrap">🎓 Bulk Marksheets</button>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div class="lg:col-span-2 gc overflow-hidden">
@@ -556,6 +703,57 @@ textarea.inp{resize:vertical;min-height:80px;}
         </div>
       </div>
 
+      <!-- ═══════════ ADMISSION QUERIES ═══════════ -->
+      <div id="sec-admissions" class="sec">
+
+        <!-- ── TOP BAR ── -->
+        <div class="flex flex-wrap items-center gap-3 mb-5">
+          <div class="flex rounded-xl overflow-hidden border border-slate-700">
+            <button id="viewTabList" onclick="switchAdmView('list')" class="px-4 py-2 text-xs font-semibold transition-colors" style="background:rgba(16,185,129,0.15);color:#6ee7b7">☰ List View</button>
+            <button id="viewTabPipeline" onclick="switchAdmView('pipeline')" class="px-4 py-2 text-xs font-semibold transition-colors text-slate-500 hover:text-white">🏁 Pipeline View</button>
+          </div>
+          <button onclick="openAddLead()" class="btn ba whitespace-nowrap">＋ Add Lead</button>
+          <div class="flex-1"></div>
+          <button onclick="exportQueriesPDF()" class="btn bs whitespace-nowrap">📊 Export PDF</button>
+          <button onclick="downloadBlankAdmissionForm()" class="btn bw whitespace-nowrap">📋 Blank Form</button>
+        </div>
+
+        <!-- ── STATS ROW ── -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-5" id="pipelineStats"></div>
+
+        <!-- ══════════ LIST VIEW ══════════ -->
+        <div id="admViewList">
+          <!-- Filters -->
+          <div class="flex flex-wrap gap-3 mb-4">
+            <input id="aqSearch" oninput="filterAdminQueries()" class="inp flex-1" style="min-width:160px" placeholder="🔍 Search by name, phone, course..."/>
+            <select id="aqStageFilter" class="inp w-auto" onchange="filterAdminQueries()">
+              <option value="">All Stages</option>
+            </select>
+            <select id="aqCourseFilter" class="inp w-auto" onchange="filterAdminQueries()">
+              <option value="">All Courses</option>
+            </select>
+          </div>
+          <div class="gc overflow-hidden">
+            <div class="px-5 py-3 border-b border-emerald-400/8 flex items-center justify-between">
+              <h3 class="font-semibold text-white text-sm">All Leads / Enquiries</h3>
+              <span id="aqCountLabel" class="text-slate-600 text-xs">0 records</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="tbl">
+                <thead><tr><th>Name</th><th>Phone</th><th>Course</th><th>Stage</th><th>Date</th><th>Next Action</th><th>Actions</th></tr></thead>
+                <tbody id="aqBody"><tr><td colspan="7" class="text-center py-12 text-slate-600">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════ PIPELINE VIEW ══════════ -->
+        <div id="admViewPipeline" class="hidden">
+          <div id="pipelineBoard" class="flex gap-3 overflow-x-auto pb-4" style="min-height:420px"></div>
+        </div>
+
+      </div>
+
       <!-- ═══════════ NOTIFICATIONS ═══════════ -->
       <div id="sec-notifications" class="sec">
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -597,32 +795,86 @@ textarea.inp{resize:vertical;min-height:80px;}
 
       <!-- ═══════════ ID CARDS ═══════════ -->
       <div id="sec-idcards" class="sec">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="gc p-5">
-            <h3 class="font-semibold text-white text-sm mb-4">Generate ID Card</h3>
-            <div class="space-y-3">
-              <div><label class="lbl">User Type</label>
-                <select id="idCardType" class="inp" onchange="loadIdCardUsers()">
-                  <option value="student">Student</option>
-                  <option value="teacher">Teacher</option>
-                </select>
+        <!-- Style Gallery -->
+        <div class="gc p-5 mb-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white text-sm">🎨 ID Card Style — Select a Theme</h3>
+            <span class="text-slate-500 text-xs">5 designs · Auto-assigns by course</span>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="idStyleGallery">
+            <!-- Styles rendered by JS -->
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Controls -->
+          <div class="space-y-4">
+            <!-- Single Card -->
+            <div class="gc p-5">
+              <h3 class="font-semibold text-white text-sm mb-4">👤 Single ID Card</h3>
+              <div class="space-y-3">
+                <div><label class="lbl">User Type</label>
+                  <select id="idCardType" class="inp" onchange="loadIdCardUsers()">
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                  </select>
+                </div>
+                <div><label class="lbl">Select User</label><select id="idCardUser" class="inp" onchange="previewIDCard()"></select></div>
+                <div><label class="lbl">🎨 Style Override</label>
+                  <select id="idStyleOverride" class="inp" onchange="previewIDCard()">
+                    <option value="">Auto (by course)</option>
+                    <option value="0">Style 1 — Classic Beige</option>
+                    <option value="1">Style 2 — Deep Navy</option>
+                    <option value="2">Style 3 — Forest Green</option>
+                    <option value="3">Style 4 — Royal Purple</option>
+                    <option value="4">Style 5 — Crimson Red</option>
+                  </select>
+                </div>
+                <button onclick="downloadIDCard()" class="btn bp w-full justify-center">⬇ Download ID Card PDF</button>
               </div>
-              <div><label class="lbl">Select User</label><select id="idCardUser" class="inp"></select></div>
-              <button onclick="generateIDCard()" class="btn bp w-full justify-center">Generate ID Card PDF</button>
+            </div>
+
+            <!-- Bulk Cards -->
+            <div class="gc p-5">
+              <h3 class="font-semibold text-white text-sm mb-4">📦 Bulk ID Cards</h3>
+              <div class="space-y-3">
+                <div><label class="lbl">User Type</label>
+                  <select id="bulkIdType" class="inp">
+                    <option value="student">All Students</option>
+                    <option value="teacher">All Teachers</option>
+                  </select>
+                </div>
+                <div><label class="lbl">Filter by Course</label><select id="bulkIdCourse" class="inp"><option value="">All Courses</option></select></div>
+                <div><label class="lbl">Style</label>
+                  <select id="bulkIdStyle" class="inp">
+                    <option value="auto">Auto (by course/index)</option>
+                    <option value="0">Style 1 — Classic Beige</option>
+                    <option value="1">Style 2 — Deep Navy</option>
+                    <option value="2">Style 3 — Forest Green</option>
+                    <option value="3">Style 4 — Royal Purple</option>
+                    <option value="4">Style 5 — Crimson Red</option>
+                  </select>
+                </div>
+                <button onclick="generateBulkIDCards()" class="btn bs w-full justify-center">📦 Generate Bulk PDF</button>
+              </div>
             </div>
           </div>
+
+          <!-- Live Preview -->
           <div class="gc p-5">
-            <h3 class="font-semibold text-white text-sm mb-4">Bulk ID Cards</h3>
-            <div class="space-y-3">
-              <div><label class="lbl">User Type</label>
-                <select id="bulkIdType" class="inp">
-                  <option value="student">All Students</option>
-                  <option value="teacher">All Teachers</option>
-                </select>
-              </div>
-              <div><label class="lbl">Filter by Course (Students)</label><select id="bulkIdCourse" class="inp"><option value="">All Courses</option></select></div>
-              <button onclick="generateBulkIDCards()" class="btn bs w-full justify-center">Generate Bulk PDF</button>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-white text-sm">👁 Live Preview</h3>
+              <span class="text-slate-600 text-xs">85 × 54 mm (Credit Card size)</span>
             </div>
+            <div class="flex items-center justify-center py-4">
+              <!-- Preview card rendered here -->
+              <div id="idCardPreviewWrap" style="transform:scale(1);transform-origin:center;">
+                <div id="idCardPreview" style="width:510px;height:324px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative;">
+                  <div class="flex items-center justify-center h-full text-slate-600 text-sm">Select a user to preview</div>
+                </div>
+              </div>
+            </div>
+            <p class="text-slate-600 text-xs text-center mt-2">Preview is 6× actual card size</p>
           </div>
         </div>
       </div>
@@ -682,7 +934,7 @@ const db = getFirestore(app);
 // ── GLOBALS ──────────────────────────────────────────────────
 let session = null;
 let allTeachers=[], allStudents=[], allCourses=[], allFees=[], allPayments=[];
-let cUsers=null, cFees=null, cFeeMonthly=null, cGrade=null;
+let cUsers=null, cFees=null, cFeeMonthly=null, cGrade=null, cAdm=null, cEnroll=null, cFeeStatus=null;
 let notifUnsub=null;
 
 // ── INIT ─────────────────────────────────────────────────────
@@ -767,6 +1019,7 @@ function showApp() {
   loadProfile();
   loadAll();
   listenNotifications();
+  loadAdmissionsBadgeCount();
 }
 
 window.toggleSb = () => {
@@ -780,7 +1033,7 @@ window.showSec = (sec) => {
   document.querySelectorAll('.sl').forEach(s=>s.classList.remove('active'));
   document.getElementById('sec-'+sec).classList.add('active');
   document.querySelectorAll('.sl').forEach(s=>{if(s.getAttribute('onclick')?.includes("'"+sec+"'"))s.classList.add('active');});
-  const titles={dashboard:'Dashboard',profile:'My Profile',teachers:'Teachers',students:'Students',courses:'Courses',batches:'Batch Management',attendance:'Attendance',fees:'Fee Management',results:'Results & Ranks',curriculum:'Curriculum Monitor',homework:'Homework Monitor',exams:'Online Exams',notifications:'Notifications',idcards:'ID Cards',certificates:'Certificates'};
+  const titles={dashboard:'Dashboard',profile:'My Profile',teachers:'Teachers',students:'Students',courses:'Courses',batches:'Batch Management',attendance:'Attendance',fees:'Fee Management',results:'Results & Ranks',curriculum:'Curriculum Monitor',homework:'Homework Monitor',exams:'Online Exams',admissions:'📩 Admission Queries',notifications:'Notifications',idcards:'ID Cards',certificates:'Certificates'};
   document.getElementById('pgTitle').textContent=titles[sec]||sec;
   if(window.innerWidth<1024) document.getElementById('sidebar').style.transform='translateX(-100%)';
   if(sec==='teachers') loadTeachers();
@@ -793,82 +1046,177 @@ window.showSec = (sec) => {
   if(sec==='curriculum') initAdminCurriculum();
   if(sec==='homework') {populateHwMonFilters();loadHwMonitor();}
   if(sec==='exams') loadExams();
+  if(sec==='admissions') initAdminAdmissions();
   if(sec==='notifications') loadNotifications();
-  if(sec==='idcards') {loadIdCardUsers();populateBulkIdCourses();}
-  if(sec==='certificates') loadCertSelects();
+  if(sec==='idcards') {loadIdCardUsers();populateBulkIdCourses();renderIdStyleGallery();}
+  if(sec==='certificates') {loadCertSelects();populateCertFilters();}
 };
 
 async function loadAll() {
-  const [tSnap,sSnap,cSnap,pSnap,eSnap,uSnap,bSnap] = await Promise.all([
+  // Greeting + date
+  const hr=new Date().getHours();
+  const greet=hr<12?'Morning':hr<17?'Afternoon':'Evening';
+  const dateEl=document.getElementById('dashGreeting');
+  const dateLine=document.getElementById('dashDateLine');
+  if(dateEl) dateEl.textContent=greet;
+  if(dateLine) dateLine.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const [tSnap,sSnap,cSnap,pSnap,eSnap,uSnap,bSnap,aqSnap,enSnap] = await Promise.all([
     getDocs(query(collection(db,'users'),where('role','==','teacher'))),
     getDocs(query(collection(db,'users'),where('role','==','student'))),
     getDocs(collection(db,'courses')),
     getDocs(collection(db,'payments')),
     getDocs(collection(db,'onlineExams')),
     getDocs(query(collection(db,'users'),where('isActive','==',true))),
-    getDocs(collection(db,'batches'))
+    getDocs(collection(db,'batches')),
+    getDocs(collection(db,'admissionQueries')).catch(()=>({size:0,docs:[]})),
+    getDocs(collection(db,'enrollments')).catch(()=>({size:0,docs:[]}))
   ]);
   allTeachers=tSnap.docs.map(d=>d.data());
   allStudents=sSnap.docs.map(d=>d.data());
   allCourses=cSnap.docs.map(d=>({id:d.id,...d.data()}));
   allPayments=pSnap.docs.map(d=>({id:d.id,...d.data()}));
 
-  document.getElementById('dTeachers').textContent=tSnap.size;
-  document.getElementById('dStudents').textContent=sSnap.size;
-  document.getElementById('dCourses').textContent=cSnap.size;
-  document.getElementById('dExams').textContent=eSnap.size;
-  document.getElementById('dActive').textContent=uSnap.size;
+  // Fees calc
+  let totalFees=0, pendingFees=0;
+  const paidStudents=new Set(), partialStudents=new Set();
+  pSnap.forEach(d=>{
+    const dd=d.data();
+    totalFees+=(dd.amount||0);
+    if(dd.status==='paid') paidStudents.add(dd.studentId);
+    else if(dd.status==='partial') partialStudents.add(dd.studentId);
+  });
+  // Estimate pending from enrollments
+  enSnap.docs.forEach(d=>{
+    const dd=d.data();
+    if(dd.totalFee && dd.paidAmount!=null) pendingFees+=Math.max(0,(dd.totalFee||0)-(dd.paidAmount||0));
+  });
+  const feeRate=totalFees?(Math.min(100,Math.round(totalFees/(totalFees+pendingFees+1)*100))):0;
+
+  // New leads count
+  const newLeads=aqSnap.docs.filter(d=>d.data().status==='new'||!d.data().status).length;
+
+  // Animate numbers
+  const animCount=(id,val,prefix='')=>{
+    const el=document.getElementById(id); if(!el) return;
+    if(typeof val==='string'){el.textContent=val;return;}
+    let curr=0; const step=Math.ceil(val/30)||1;
+    const t=setInterval(()=>{curr=Math.min(curr+step,val);el.textContent=prefix+curr.toLocaleString('en-IN');if(curr>=val)clearInterval(t);},35);
+  };
+  animCount('dTeachers',tSnap.size);
+  animCount('dStudents',sSnap.size);
+  animCount('dCourses',cSnap.size);
+  animCount('dExams',eSnap.size);
+  animCount('dActive',uSnap.size);
+  animCount('dBatches',bSnap.size);
+  animCount('dAdmissions',aqSnap.size);
+  animCount('dFees',totalFees,'₹');
+  const pendEl=document.getElementById('dFeePending');
+  if(pendEl) pendEl.textContent='₹'+pendingFees.toLocaleString('en-IN');
+  const rateEl=document.getElementById('dFeeRate');
+  if(rateEl) rateEl.textContent=feeRate+'%';
+
   document.getElementById('sbTCount').textContent=tSnap.size;
   document.getElementById('sbSCount').textContent=sSnap.size;
   document.getElementById('sbBatchCount').textContent=bSnap.size;
 
-  let total=0;
-  pSnap.forEach(d=>total+=(d.data().amount||0));
-  document.getElementById('dFees').textContent='₹'+total.toLocaleString('en-IN');
+  // Lead alert badge
+  if(newLeads>0){
+    const alertEl=document.getElementById('dashAdmissionAlert');
+    const countEl=document.getElementById('dashNewLeadCount');
+    if(alertEl){alertEl.classList.remove('hidden');}
+    if(countEl) countEl.textContent=newLeads;
+  }
 
-  renderDashCharts(tSnap.size,sSnap.size,pSnap);
+  // Progress bars
+  setTimeout(()=>{
+    const pb=document.getElementById('dFeePendingBar');
+    const rb=document.getElementById('dFeeRateBar');
+    if(pb) pb.style.width=Math.min(100,pendingFees/(totalFees+pendingFees+1)*100)+'%';
+    if(rb) rb.style.width=feeRate+'%';
+  },400);
+
+  renderDashCharts(tSnap.size,sSnap.size,pSnap,aqSnap,enSnap,paidStudents,partialStudents,totalFees);
   renderRecentReg();
-  renderFeeStatusOverview(pSnap);
   populateStudentCourseFilter();
 }
 
-function renderDashCharts(t,s,pSnap) {
+function renderDashCharts(t,s,pSnap,aqSnap,enSnap,paidStudents,partialStudents,totalFees) {
+  const SCALES={x:{ticks:{color:'#475569',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#475569',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}}};
+  const OPT=(extra={})=>({responsive:true,maintainAspectRatio:true,animation:{duration:700},...extra});
+
+  // 1. Users doughnut
   if(cUsers) cUsers.destroy();
-  cUsers=new Chart(document.getElementById('chartUsers').getContext('2d'),{type:'doughnut',data:{labels:['Teachers','Students'],datasets:[{data:[t,s],backgroundColor:['rgba(110,231,183,0.75)','rgba(129,140,248,0.75)'],borderColor:['#6ee7b7','#818cf8'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{labels:{color:'#64748b',font:{family:'DM Sans'}}}}}});
+  cUsers=new Chart(document.getElementById('chartUsers').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Teachers','Students'],datasets:[{data:[t,s],backgroundColor:['rgba(110,231,183,0.8)','rgba(129,140,248,0.8)'],borderColor:['#6ee7b7','#818cf8'],borderWidth:2,hoverOffset:6}]},
+    options:OPT({cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:10},padding:10}}}})
+  });
+
+  // 2. Monthly fee bar (last 8 months)
   if(cFees) cFees.destroy();
   const monthly={};
-  pSnap.forEach(d=>{const dt=d.data().createdAt?.toDate?d.data().createdAt.toDate():new Date();const k=dt.toLocaleString('en-IN',{month:'short',year:'2-digit'});monthly[k]=(monthly[k]||0)+(d.data().amount||0);});
-  const labs=Object.keys(monthly).slice(-7), vals=labs.map(l=>monthly[l]);
-  cFees=new Chart(document.getElementById('chartFees').getContext('2d'),{type:'bar',data:{labels:labs,datasets:[{label:'₹',data:vals,backgroundColor:'rgba(110,231,183,0.55)',borderColor:'#6ee7b7',borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#475569'},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#475569'},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+  pSnap.forEach(d=>{
+    const dt=d.data().createdAt?.toDate?d.data().createdAt.toDate():new Date();
+    const k=dt.toLocaleString('en-IN',{month:'short',year:'2-digit'});
+    monthly[k]=(monthly[k]||0)+(d.data().amount||0);
+  });
+  const fLabs=Object.keys(monthly).slice(-8), fVals=fLabs.map(l=>monthly[l]);
+  const fMax=Math.max(...fVals,1);
+  const fColors=fVals.map(v=>`rgba(110,231,183,${0.35+0.55*(v/fMax)})`);
+  const totalDisp=document.getElementById('dashFeeTotal');
+  if(totalDisp) totalDisp.textContent='Total: ₹'+totalFees.toLocaleString('en-IN');
+  cFees=new Chart(document.getElementById('chartFees').getContext('2d'),{
+    type:'bar',
+    data:{labels:fLabs,datasets:[{label:'₹',data:fVals,backgroundColor:fColors,borderColor:'#6ee7b7',borderWidth:0,borderRadius:5}]},
+    options:OPT({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.raw.toLocaleString('en-IN')}}},scales:SCALES})
+  });
+
+  // 3. Admission pipeline (stage counts)
+  if(cAdm) cAdm.destroy();
+  const stages={'new':0,'contacted':0,'demo':0,'enrolled':0,'dropped':0};
+  aqSnap.docs.forEach(d=>{const st=d.data().status||'new';if(stages[st]!=null)stages[st]++;else stages['new']++;});
+  cAdm=new Chart(document.getElementById('chartAdmissions').getContext('2d'),{
+    type:'bar',
+    data:{labels:['New','Contacted','Demo','Enrolled','Dropped'],
+          datasets:[{data:Object.values(stages),backgroundColor:['rgba(251,191,36,0.7)','rgba(56,189,248,0.7)','rgba(167,139,250,0.7)','rgba(52,211,153,0.7)','rgba(248,113,113,0.7)'],borderRadius:5,borderWidth:0}]},
+    options:OPT({plugins:{legend:{display:false}},scales:{...SCALES,y:{...SCALES.y,beginAtZero:true,ticks:{...SCALES.y.ticks,stepSize:1}}}})
+  });
+
+  // 4. Enrollment by course (top 6)
+  if(cEnroll) cEnroll.destroy();
+  const topCourses=[...allCourses].sort((a,b)=>(b.studentCount||0)-(a.studentCount||0)).slice(0,6);
+  cEnroll=new Chart(document.getElementById('chartEnrollments').getContext('2d'),{
+    type:'bar',
+    data:{labels:topCourses.map(c=>c.name.length>10?c.name.slice(0,10)+'…':c.name),
+          datasets:[{data:topCourses.map(c=>c.studentCount||0),backgroundColor:'rgba(129,140,248,0.65)',borderColor:'#818cf8',borderWidth:0,borderRadius:5}]},
+    options:OPT({indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...SCALES.x,beginAtZero:true},y:{...SCALES.y,grid:{display:false}}}})
+  });
+
+  // 5. Fee status pie
+  if(cFeeStatus) cFeeStatus.destroy();
+  const total=allStudents.length;
+  const paidC=paidStudents.size, partC=partialStudents.size, pendC=Math.max(0,total-paidC-partC);
+  cFeeStatus=new Chart(document.getElementById('chartFeeStatus').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Paid','Partial','Pending'],datasets:[{data:[paidC,partC,pendC],backgroundColor:['rgba(52,211,153,0.75)','rgba(251,191,36,0.75)','rgba(248,113,113,0.75)'],borderColor:['#34d399','#fbbf24','#f87171'],borderWidth:2,hoverOffset:6}]},
+    options:OPT({cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:'#64748b',font:{size:10},padding:8}}}})
+  });
 }
 
 function renderRecentReg() {
   const el=document.getElementById('recentReg');
-  const all=[...allTeachers,...allStudents].sort((a,b)=>0).slice(0,6);
+  const all=[...allTeachers,...allStudents].slice(0,6);
   if(!all.length){el.innerHTML='<p class="text-slate-600 text-xs text-center py-4">No registrations yet</p>';return;}
   el.innerHTML=all.map(u=>`
-    <div class="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-400/4 border border-emerald-400/8">
-      <img src="${u.profileImage||`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=${u.role==='teacher'?'818cf8':'6ee7b7'}&color=fff`}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
-      <div class="flex-1 min-w-0"><p class="text-white text-xs font-semibold truncate">${u.name}</p><p class="text-slate-600 text-xs">${u.userId}</p></div>
+    <div class="flex items-center gap-3 p-2.5 rounded-xl" style="background:rgba(110,231,183,0.04);border:1px solid rgba(110,231,183,0.08)">
+      <img src="${u.profileImage||`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name||'U')}&background=${u.role==='teacher'?'818cf8':'6ee7b7'}&color=fff`}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
+      <div class="flex-1 min-w-0">
+        <p class="text-white text-xs font-semibold truncate">${u.name}</p>
+        <p class="text-slate-600 text-xs">${u.userId||''}</p>
+      </div>
       <span class="badge ${u.role==='teacher'?'bp2':'ba'} text-xs">${u.role}</span>
     </div>`).join('');
-}
-
-function renderFeeStatusOverview(pSnap) {
-  const el=document.getElementById('feeStatusOverview');
-  const total=allStudents.length;
-  let paid=new Set(), partial=new Set();
-  pSnap.forEach(d=>{const dd=d.data();if(dd.status==='paid')paid.add(dd.studentId);else if(dd.status==='partial')partial.add(dd.studentId);});
-  const paidC=paid.size, partC=partial.size, pendC=Math.max(0,total-paidC-partC);
-  el.innerHTML=`
-    <div class="space-y-3">
-      <div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Paid</span><span class="text-emerald-400 font-bold">${paidC}/${total}</span></div>
-      <div class="fee-bar"><div class="fee-fill" style="width:${total?paidC/total*100:0}%"></div></div>
-      <div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Partial</span><span class="text-yellow-400 font-bold">${partC}</span></div>
-      <div class="fee-bar"><div class="fee-fill" style="width:${total?partC/total*100:0}%;background:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
-      <div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Pending</span><span class="text-red-400 font-bold">${pendC}</span></div>
-      <div class="fee-bar"><div class="fee-fill" style="width:${total?pendC/total*100:0}%;background:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
-    </div>`;
 }
 
 // ── PROFILE ───────────────────────────────────────────────────
@@ -985,6 +1333,8 @@ window.openAddTeacher = async () => {
       <div class="col-span-2"><label class="lbl">Full Name *</label><input id="mTName" class="inp" placeholder="Teacher full name"/></div>
       <div><label class="lbl">Phone *</label><input id="mTPhone" class="inp" placeholder="Phone number"/></div>
       <div><label class="lbl">Email</label><input id="mTEmail" class="inp" type="email" placeholder="Email address"/></div>
+      <div><label class="lbl">Date of Birth</label><input id="mTDOB" class="inp" type="date"/></div>
+      <div><label class="lbl">Gender</label><select id="mTGender" class="inp"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
       <div><label class="lbl">Qualification</label><input id="mTQual" class="inp" placeholder="e.g. B.Tech, MCA"/></div>
       <div><label class="lbl">Experience</label><input id="mTExp" class="inp" placeholder="e.g. 3 years"/></div>
       <div><label class="lbl">Subject Expertise</label><input id="mTSubject" class="inp" placeholder="e.g. Python, Web Dev"/></div>
@@ -998,6 +1348,8 @@ window.saveTeacher = async () => {
   const name=document.getElementById('mTName').value.trim();
   const phone=document.getElementById('mTPhone').value.trim();
   const email=document.getElementById('mTEmail').value.trim();
+  const dob=document.getElementById('mTDOB').value;
+  const gender=document.getElementById('mTGender').value;
   const qual=document.getElementById('mTQual').value.trim();
   const exp=document.getElementById('mTExp').value.trim();
   const subject=document.getElementById('mTSubject').value.trim();
@@ -1009,7 +1361,7 @@ window.saveTeacher = async () => {
   const num=String(snap.size+1).padStart(3,'0');
   const userId='VIT-TCH-'+num;
   const password='VIT@'+Math.random().toString(36).slice(2,8).toUpperCase();
-  await setDoc(doc(db,'users',userId),{userId,name,phone,email,qualification:qual,experience:exp,subject,address:addr,courseAssigned,password,role:'teacher',isActive:true,profileImage:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+  await setDoc(doc(db,'users',userId),{userId,name,phone,email,dob,gender,qualification:qual,experience:exp,subject,address:addr,courseAssigned,password,role:'teacher',isActive:true,profileImage:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
   closeModal();
   showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">✅ Teacher Registered!</h3>
     <div class="space-y-3">
@@ -1082,6 +1434,9 @@ function renderStudents(list) {
         <div class="flex gap-1 flex-wrap">
           <button onclick="viewUser('${s.userId}')" class="btn bg text-xs">View</button>
           <button onclick="editUser('${s.userId}')" class="btn bs text-xs">Edit</button>
+          <button onclick="adminEnrollStudent('${s.userId}','${s.name.replace(/'/g,'')}');" class="btn bp text-xs">📚 Enroll</button>
+          <button onclick="sendSpecialOffer('${s.userId}','${s.name.replace(/'/g,'')}');" class="btn text-xs" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">🎁 Offer</button>
+          <button onclick="allowStudentFreeEnrollModal('${s.userId}','${s.name.replace(/'/g,'')}');" class="btn ba text-xs">🟢 Free</button>
           <button onclick="toggleStatus('${s.userId}',${s.isActive})" class="btn bw text-xs">${s.isActive?'Disable':'Enable'}</button>
           <button onclick="changePassword('${s.userId}','${s.name.replace(/'/g,'')}')" class="btn bpk text-xs">🔑 PW</button>
           <button onclick="viewStudentPerf('${s.userId}')" class="btn bs text-xs">Perf</button>
@@ -1139,6 +1494,11 @@ window.saveStudent = async () => {
   const userId='VIT-STD-'+num;
   const password='VIT@'+Math.random().toString(36).slice(2,8).toUpperCase();
   await setDoc(doc(db,'users',userId),{userId,name,phone,email,dob,gender,guardianName,guardianPhone,address,courseAssigned,totalFee,password,role:'student',isActive:true,profileImage:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+  // Create enrollment record if course selected
+  if(courseAssigned){
+    const courseDoc = allCourses.find(c=>c.name===courseAssigned||c.id===courseAssigned);
+    await addDoc(collection(db,'enrollments'),{studentId:userId,studentName:name,courseId:courseDoc?.id||courseAssigned,courseName:courseDoc?.name||courseAssigned,teacherId:courseDoc?.teacherId||'',teacherName:courseDoc?.teacherName||'',enrolledAt:serverTimestamp(),enrolledBy:'admin'});
+  }
   // Also create fee record
   if(totalFee>0) await addDoc(collection(db,'fees'),{studentId:userId,studentName:name,courseAssigned,totalFee,paidAmount:0,balance:totalFee,status:'pending',createdAt:serverTimestamp()});
   closeModal();
@@ -1205,6 +1565,8 @@ window.viewUser = async (userId) => {
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="p-3 rounded-xl bg-emerald-400/5 border border-emerald-400/10"><p class="text-slate-500 text-xs">Phone</p><p class="text-white text-sm">${u.phone||'-'}</p></div>
       <div class="p-3 rounded-xl bg-emerald-400/5 border border-emerald-400/10"><p class="text-slate-500 text-xs">Email</p><p class="text-white text-sm">${u.email||'-'}</p></div>
+      <div class="p-3 rounded-xl bg-sky-400/5 border border-sky-400/10"><p class="text-slate-500 text-xs">Date of Birth</p><p class="text-white text-sm">${u.dob?new Date(u.dob).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'-'}</p></div>
+      <div class="p-3 rounded-xl bg-sky-400/5 border border-sky-400/10"><p class="text-slate-500 text-xs">Gender</p><p class="text-white text-sm">${u.gender||'-'}</p></div>
       <div class="p-3 rounded-xl bg-indigo-400/5 border border-indigo-400/10 col-span-2">
         <p class="text-slate-500 text-xs mb-1">Current Password <span class="text-yellow-400">(Admin Only)</span></p>
         <div class="flex items-center gap-2">
@@ -1221,6 +1583,7 @@ window.viewUser = async (userId) => {
       `:u.role==='teacher'?`
       <div class="p-3 rounded-xl bg-emerald-400/5 border border-emerald-400/10"><p class="text-slate-500 text-xs">Qualification</p><p class="text-white text-sm">${u.qualification||'-'}</p></div>
       <div class="p-3 rounded-xl bg-emerald-400/5 border border-emerald-400/10"><p class="text-slate-500 text-xs">Experience</p><p class="text-white text-sm">${u.experience||'-'}</p></div>
+      <div class="p-3 rounded-xl bg-emerald-400/5 border border-emerald-400/10 col-span-2"><p class="text-slate-500 text-xs">Subject</p><p class="text-white text-sm">${u.subject||'-'}</p></div>
       `:''}
     </div>
     <div class="flex gap-2">
@@ -1240,6 +1603,8 @@ window.editUser = async (userId) => {
       <div class="col-span-2"><label class="lbl">Full Name</label><input id="euName" class="inp" value="${u.name||''}"/></div>
       <div><label class="lbl">Phone</label><input id="euPhone" class="inp" value="${u.phone||''}"/></div>
       <div><label class="lbl">Email</label><input id="euEmail" class="inp" value="${u.email||''}"/></div>
+      <div><label class="lbl">Date of Birth</label><input id="euDOB" class="inp" type="date" value="${u.dob||''}"/></div>
+      <div><label class="lbl">Gender</label><select id="euGender" class="inp"><option value="">Select</option><option ${u.gender==='Male'?'selected':''}>Male</option><option ${u.gender==='Female'?'selected':''}>Female</option><option ${u.gender==='Other'?'selected':''}>Other</option></select></div>
       ${u.role==='teacher'?`
       <div><label class="lbl">Qualification</label><input id="euQual" class="inp" value="${u.qualification||''}"/></div>
       <div><label class="lbl">Experience</label><input id="euExp" class="inp" value="${u.experience||''}"/></div>
@@ -1258,10 +1623,12 @@ window.updateUser = async (userId, role) => {
   const name=document.getElementById('euName').value.trim();
   const phone=document.getElementById('euPhone').value.trim();
   const email=document.getElementById('euEmail').value.trim();
+  const dob=document.getElementById('euDOB').value;
+  const gender=document.getElementById('euGender').value;
   const course=document.getElementById('euCourse').value;
   const addr=document.getElementById('euAddr').value.trim();
   if(!name) return toast('Name required','error');
-  const upd={name,phone,email,courseAssigned:course,address:addr,updatedAt:serverTimestamp()};
+  const upd={name,phone,email,dob,gender,courseAssigned:course,address:addr,updatedAt:serverTimestamp()};
   if(role==='teacher'){upd.qualification=document.getElementById('euQual').value.trim();upd.experience=document.getElementById('euExp').value.trim();upd.subject=document.getElementById('euSubject')?.value.trim()||'';}
   else{upd.guardianName=document.getElementById('euGuardian')?.value.trim()||'';upd.guardianPhone=document.getElementById('euGPhone')?.value.trim()||'';}
   await updateDoc(doc(db,'users',userId),upd);
@@ -1369,26 +1736,65 @@ async function loadCourses() {
   allCourses=snap.docs.map(d=>({id:d.id,...d.data()}));
   const enSnap=await getDocs(collection(db,'enrollments'));
   const allEn=enSnap.docs.map(d=>d.data());
+  // Build category pills
+  const cats=[...new Set(allCourses.map(c=>c.category).filter(Boolean))];
+  const pillsEl=document.getElementById('adminCoursePills');
+  if(pillsEl){
+    pillsEl.innerHTML=`<button onclick="filterAdminCourses('')" class="badge ba" style="cursor:pointer;padding:4px 12px;font-size:11px" id="acpill-all">All</button>`
+      +cats.map(cat=>`<button onclick="filterAdminCourses('${cat}')" class="badge bw2" style="cursor:pointer;padding:4px 12px;font-size:11px" id="acpill-${CSS.escape(cat)}">${cat}</button>`).join('');
+  }
+  renderAdminCourseGrid(allCourses,allEn);
+}
+
+window._adminAllEn=[];
+window.filterAdminCourses = (catOverride) => {
+  const q=(document.getElementById('courseSearchInput')?.value||'').toLowerCase();
+  const cat=catOverride!==undefined?catOverride:(document.getElementById('courseCatFilter')?.value||'');
+  const feeType=document.getElementById('courseFeeFilter')?.value||'';
+  const statusFilter=document.getElementById('courseStatusFilter')?.value||'';
+  // Update pill UI
+  document.querySelectorAll('[id^="acpill-"]').forEach(b=>{b.className='badge bw2';b.style.cssText='cursor:pointer;padding:4px 12px;font-size:11px';});
+  const ap=cat?document.getElementById('acpill-'+CSS.escape(cat)):document.getElementById('acpill-all');
+  if(ap){ap.className='badge ba';ap.style.cssText='cursor:pointer;padding:4px 12px;font-size:11px';}
+  let filtered=allCourses;
+  if(cat) filtered=filtered.filter(c=>c.category===cat);
+  if(feeType==='free') filtered=filtered.filter(c=>!(c.fees>0));
+  if(feeType==='paid') filtered=filtered.filter(c=>c.fees>0);
+  if(statusFilter) filtered=filtered.filter(c=>getCourseStatus(c)===statusFilter);
+  if(q) filtered=filtered.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.category||'').toLowerCase().includes(q)||(c.description||c.subject||'').toLowerCase().includes(q)||(c.features||'').toLowerCase().includes(q));
+  renderAdminCourseGrid(filtered,window._adminAllEn);
+};
+
+function renderAdminCourseGrid(courses,allEn) {
+  window._adminAllEn=allEn;
   const grid=document.getElementById('coursesGrid');
-  if(!allCourses.length){grid.innerHTML='<div class="gc p-8 text-center text-slate-600 col-span-full">No courses yet</div>';return;}
-  grid.innerHTML=allCourses.map(c=>{
+  if(!courses.length){grid.innerHTML='<div class="gc p-8 text-center text-slate-600 col-span-full">No courses found</div>';return;}
+  grid.innerHTML=courses.map(c=>{
     const count=allEn.filter(e=>e.courseId===c.id).length;
-    return `<div class="gc p-5 hover:border-emerald-400/25 transition-all">
-      ${c.bannerUrl?`<img src="${c.bannerUrl}" class="w-full h-24 object-cover rounded-lg mb-3"/>`:`<div class="w-full h-24 rounded-lg mb-3 flex items-center justify-center bg-gradient-to-br from-emerald-400/10 to-indigo-400/10"><span class="text-3xl">📚</span></div>`}
-      <h4 class="font-display font-bold text-white text-sm mb-1">${c.name}</h4>
-      <p class="text-slate-500 text-xs mb-1">${c.subject||''}</p>
-      <p class="text-slate-600 text-xs mb-3">Teacher: <span class="text-emerald-400">${c.teacherName||'-'}</span></p>
-      <div class="flex items-center justify-between mb-3">
-        <span class="badge ba">${count} enrolled</span>
-        <span class="mono text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">${c.joinCode||'-'}</span>
-      </div>
-      <div class="flex items-center justify-between text-xs mb-3">
-        ${c.fees>0 ? `<span class="text-emerald-400 font-bold">₹${(c.netFee||c.fees).toLocaleString('en-IN')}</span>` : '<span class="text-slate-600">No fee</span>'}
-        ${c.discountAmount>0 ? `<span class="text-yellow-400">🏷 ${c.discountType==='percent'?c.discountAmount+'% off':'₹'+c.discountAmount+' off'}</span>` : ''}
-      </div>
-      <div class="flex gap-2">
-        <button onclick="editCourse('${c.id}')" class="btn bs flex-1 justify-center text-xs">Edit</button>
-        <button onclick="deleteCourse('${c.id}')" class="btn bd justify-center text-xs">Delete</button>
+    const isFree=!(c.fees>0);
+    const netFee=c.netFee||c.fees||0;
+    return `<div class="gc overflow-hidden hover:border-emerald-400/25 transition-all" style="display:flex;flex-direction:column">
+      ${c.bannerUrl?`<img src="${c.bannerUrl}" class="w-full h-24 object-cover"/>`:`<div class="w-full h-24 flex items-center justify-center bg-gradient-to-br from-emerald-400/10 to-indigo-400/10"><span class="text-3xl">📚</span></div>`}
+      <div class="p-4 flex flex-col flex-1">
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <h4 class="font-display font-bold text-white text-sm">${c.name}</h4>
+          <span class="badge ${isFree?'ba':'bw2'} text-xs flex-shrink-0">${isFree?'🟢 Free':'💰 Paid'}</span>
+        </div>
+        ${c.category?`<span class="badge bv2 text-xs mb-1 w-fit">${c.category}</span>`:''}
+        <p class="text-slate-500 text-xs mb-1">${c.description||c.subject||''}</p>
+        <p class="text-slate-600 text-xs mb-1">👨‍🏫 ${c.teacherName||'-'} ${c.duration?`· ⏱ ${c.duration}`:''}</p>
+        <div class="flex items-center gap-2 mb-1">${getCourseStatusBadge(c)}${getCourseStatusDateLine(c)}</div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="badge ba text-xs">${count} enrolled</span>
+          ${!isFree?`<span class="text-emerald-400 font-bold text-sm">₹${netFee.toLocaleString('en-IN')}</span>`:''}
+          ${isFree&&c.selfEnrollEnabled?`<span class="badge bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs">✓ Self-Enroll ON</span>`:''}
+        </div>
+        ${c.discountAmount>0&&!isFree?`<p class="text-yellow-400 text-xs mb-2">🏷 ${c.discountType==='percent'?c.discountAmount+'% off':'₹'+c.discountAmount+' off'}</p>`:''}
+        <div class="flex gap-2 mt-auto pt-2">
+          <button onclick="editCourse('${c.id}')" class="btn bs flex-1 justify-center text-xs">Edit</button>
+          ${isFree&&c.selfEnrollEnabled?`<button onclick="manageFreeCourseEnroll('${c.id}')" class="btn ba text-xs">👥 Manage</button>`:''}
+          <button onclick="deleteCourse('${c.id}')" class="btn bd justify-center text-xs">Delete</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1397,67 +1803,143 @@ async function loadCourses() {
 window.openAddCourse = async () => {
   const tSnap=await getDocs(query(collection(db,'users'),where('role','==','teacher')));
   const tOpts=tSnap.docs.map(d=>`<option value="${d.id}" data-name="${d.data().name}">${d.data().name}</option>`).join('');
-  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">Add New Course</h3>
+  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">➕ Add New Course</h3>
     <div class="space-y-3">
       <div><label class="lbl">Course Name *</label><input id="cName" class="inp" placeholder="e.g. Web Development"/></div>
-      <div><label class="lbl">Subject</label><input id="cSubject" class="inp" placeholder="e.g. HTML, CSS, JavaScript"/></div>
-      <div><label class="lbl">Duration</label><input id="cDuration" class="inp" placeholder="e.g. 3 months"/></div>
-      <div><label class="lbl">Fees (₹)</label><input id="cFees" class="inp" type="number" placeholder="Course fee amount"/></div>
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="lbl">Discount Type</label>
-          <select id="cDiscountType" class="inp" onchange="updateDiscountLabel()">
-            <option value="amount">Fixed Amount (₹)</option>
-            <option value="percent">Percentage (%)</option>
+        <div><label class="lbl">Category *</label>
+          <select id="cCategory" class="inp">
+            <option value="">Select Category</option>
+            <option>Computer Basics</option><option>Office Tools</option><option>Programming</option>
+            <option>Web Development</option><option>Graphic Design</option><option>Accounting</option>
+            <option>Networking</option><option>Database</option><option>Other</option>
           </select>
         </div>
-        <div><label class="lbl" id="cDiscountLabel">Discount Amount (₹)</label><input id="cDiscount" class="inp" type="number" placeholder="0" min="0"/></div>
+        <div><label class="lbl">Duration (text)</label><input id="cDuration" class="inp" placeholder="e.g. 3 months / 60 hrs"/></div>
       </div>
-      <div id="discountPreview" class="p-2.5 rounded-lg bg-yellow-400/8 border border-yellow-400/20 text-xs text-yellow-400 hidden">Discount preview: ₹0 off</div>
+      <div><label class="lbl">Course Description</label><textarea id="cDescription" class="inp" rows="2" placeholder="Brief overview of what this course covers..."></textarea></div>
+      <div><label class="lbl">Course Features</label><input id="cFeatures" class="inp" placeholder="e.g. Live Classes, Projects, Certificate, Placement Support"/>
+        <p class="text-slate-600 text-xs mt-1">Comma-separated features dikhenge students ko</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Start Date *</label><input id="cStartDate" class="inp" type="date" onchange="updateCourseDurationPreview()"/></div>
+        <div><label class="lbl">End Date *</label><input id="cEndDate" class="inp" type="date" onchange="updateCourseDurationPreview()"/></div>
+      </div>
+      <div id="courseDatePreview" class="hidden p-2.5 rounded-lg text-xs" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);color:#7dd3fc"></div>
+
+      <!-- ── PRICING SECTION ── -->
+      <div class="p-3 rounded-xl space-y-3" style="background:rgba(110,231,183,0.05);border:1px solid rgba(110,231,183,0.15)">
+        <p class="text-emerald-400 text-xs font-semibold tracking-wide">💰 COURSE PRICING</p>
+        <div><label class="lbl">Course Fee (₹) — 0 for Free</label>
+          <input id="cFees" class="inp" type="number" placeholder="e.g. 5000" min="0" value="0" oninput="updateFreeEnrollVisibility();updateDiscountPreviewLive()"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl">Discount Type</label>
+            <select id="cDiscountType" class="inp" onchange="updateDiscountLabel();updateDiscountPreviewLive()">
+              <option value="amount">Fixed Amount (₹)</option>
+              <option value="percent">Percentage (%)</option>
+            </select>
+          </div>
+          <div><label class="lbl" id="cDiscountLabel">Discount Amount (₹)</label>
+            <input id="cDiscount" class="inp" type="number" placeholder="0" min="0" value="0" oninput="updateDiscountPreviewLive()"/>
+          </div>
+        </div>
+        <div id="discountPreview" class="p-2.5 rounded-lg hidden text-xs" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:#fbbf24"></div>
+        <div id="netFeeDisplay" class="p-2.5 rounded-lg hidden text-xs font-semibold" style="background:rgba(110,231,183,0.08);border:1px solid rgba(110,231,183,0.2);color:#6ee7b7"></div>
+      </div>
+
+      <!-- Free Course Self-Enroll Option -->
+      <div id="freeEnrollBox" class="p-3 rounded-xl" style="background:rgba(110,231,183,0.07);border:1px solid rgba(110,231,183,0.2)">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" id="cSelfEnroll" class="w-4 h-4 rounded accent-emerald-400"/>
+          <div>
+            <p class="text-white text-xs font-semibold">Allow Students to Self-Enroll</p>
+            <p class="text-slate-500 text-xs mt-0.5">Free course — approved students can enroll themselves.</p>
+          </div>
+        </label>
+      </div>
       <div><label class="lbl">Assign Teacher</label><select id="cTeacher" class="inp"><option value="">Select Teacher</option>${tOpts}</select></div>
-      <div><label class="lbl">Course Banner</label><input type="file" accept="image/*" id="cBanner" class="inp py-2 text-xs"/></div>
-      <button onclick="saveCourse(null)" class="btn bp w-full justify-center mt-2">Create Course</button>
+      <div><label class="lbl">Course Banner (optional)</label><input type="file" accept="image/*" id="cBanner" class="inp py-2 text-xs"/></div>
+      <button onclick="saveCourse(null)" class="btn bp w-full justify-center mt-2">✅ Create Course</button>
     </div>`);
+  // init discount preview
+  setTimeout(()=>{ updateFreeEnrollVisibility(); }, 100);
 };
 
 window.editCourse = async (id) => {
   const c=allCourses.find(x=>x.id===id);if(!c)return;
   const tSnap=await getDocs(query(collection(db,'users'),where('role','==','teacher')));
   const tOpts=tSnap.docs.map(d=>`<option value="${d.id}" data-name="${d.data().name}" ${c.teacherId===d.id?'selected':''}>${d.data().name}</option>`).join('');
+  const isFree = !(c.fees>0);
+  const cats=['Computer Basics','Office Tools','Programming','Web Development','Graphic Design','Accounting','Networking','Database','Other'];
+  const catOpts=cats.map(cat=>`<option ${c.category===cat?'selected':''}>${cat}</option>`).join('');
   showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">Edit Course</h3>
     <div class="space-y-3">
       <div><label class="lbl">Course Name</label><input id="cName" class="inp" value="${c.name}"/></div>
-      <div><label class="lbl">Subject</label><input id="cSubject" class="inp" value="${c.subject||''}"/></div>
-      <div><label class="lbl">Duration</label><input id="cDuration" class="inp" value="${c.duration||''}"/></div>
-      <div><label class="lbl">Fees (₹)</label><input id="cFees" class="inp" type="number" value="${c.fees||''}"/></div>
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="lbl">Discount Type</label>
-          <select id="cDiscountType" class="inp" onchange="updateDiscountLabel()">
-            <option value="amount" ${(c.discountType||'amount')==='amount'?'selected':''}>Fixed Amount (₹)</option>
-            <option value="percent" ${c.discountType==='percent'?'selected':''}>Percentage (%)</option>
-          </select>
+        <div><label class="lbl">Category</label>
+          <select id="cCategory" class="inp"><option value="">Select Category</option>${catOpts}</select>
         </div>
-        <div><label class="lbl" id="cDiscountLabel">${c.discountType==='percent'?'Discount (%)':'Discount Amount (₹)'}</label><input id="cDiscount" class="inp" type="number" value="${c.discountAmount||0}" min="0"/></div>
+        <div><label class="lbl">Duration (text)</label><input id="cDuration" class="inp" value="${c.duration||''}"/></div>
       </div>
-      <div id="discountPreview" class="p-2.5 rounded-lg bg-yellow-400/8 border border-yellow-400/20 text-xs text-yellow-400">${c.discountAmount>0?`🏷 Discount: ${c.discountType==='percent'?c.discountAmount+'%':'₹'+c.discountAmount} on ₹${c.fees||0} → Net: ₹${c.discountType==='percent'?Math.max(0,(c.fees||0)-Math.round((c.fees||0)*(c.discountAmount/100))):Math.max(0,(c.fees||0)-(c.discountAmount||0))}`:''}</div>
+      <div><label class="lbl">Course Description</label><textarea id="cDescription" class="inp" rows="2">${c.description||''}</textarea></div>
+      <div><label class="lbl">Course Features</label><input id="cFeatures" class="inp" value="${c.features||''}" placeholder="e.g. Live Classes, Projects, Certificate"/>
+        <p class="text-slate-600 text-xs mt-1">Comma-separated features dikhenge students ko</p></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Start Date *</label><input id="cStartDate" class="inp" type="date" value="${c.startDate||''}" onchange="updateCourseDurationPreview()"/></div>
+        <div><label class="lbl">End Date *</label><input id="cEndDate" class="inp" type="date" value="${c.endDate||''}" onchange="updateCourseDurationPreview()"/></div>
+      </div>
+      <div id="courseDatePreview" class="${c.startDate&&c.endDate?'':'hidden'} p-2.5 rounded-lg text-xs" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);color:#7dd3fc">${c.startDate&&c.endDate?getCourseStatusText(c.startDate,c.endDate):''}</div>
+      <div class="p-3 rounded-xl space-y-3" style="background:rgba(110,231,183,0.05);border:1px solid rgba(110,231,183,0.15)">
+        <p class="text-emerald-400 text-xs font-semibold tracking-wide">💰 COURSE PRICING</p>
+        <div><label class="lbl">Course Fee (₹) — 0 for Free</label><input id="cFees" class="inp" type="number" value="${c.fees||0}" oninput="updateFreeEnrollVisibility();updateDiscountPreviewLive()"/></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl">Discount Type</label>
+            <select id="cDiscountType" class="inp" onchange="updateDiscountLabel();updateDiscountPreviewLive()">
+              <option value="amount" ${(c.discountType||'amount')==='amount'?'selected':''}>Fixed Amount (₹)</option>
+              <option value="percent" ${c.discountType==='percent'?'selected':''}>Percentage (%)</option>
+            </select>
+          </div>
+          <div><label class="lbl" id="cDiscountLabel">${c.discountType==='percent'?'Discount (%)':'Discount Amount (₹)'}</label><input id="cDiscount" class="inp" type="number" value="${c.discountAmount||0}" min="0" oninput="updateDiscountPreviewLive()"/></div>
+        </div>
+        <div id="discountPreview" class="p-2.5 rounded-lg text-xs ${c.discountAmount>0?'':'hidden'}" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:#fbbf24">${c.discountAmount>0?`🏷 Discount: ${c.discountType==='percent'?c.discountAmount+'%':'₹'+c.discountAmount}`:''}</div>
+        <div id="netFeeDisplay" class="p-2.5 rounded-lg text-xs font-semibold ${(c.fees||0)>0?'':'hidden'}" style="background:rgba(110,231,183,0.08);border:1px solid rgba(110,231,183,0.2);color:#6ee7b7">${(c.fees||0)>0?`✅ Net Fee: ₹${(c.netFee||c.fees||0).toLocaleString('en-IN')}`:''}</div>
+      </div>
+      <div id="freeEnrollBox" class="p-3 rounded-xl ${isFree?'':'hidden'}" style="background:rgba(110,231,183,0.07);border:1px solid rgba(110,231,183,0.2)">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" id="cSelfEnroll" class="w-4 h-4 rounded accent-emerald-400" ${c.selfEnrollEnabled?'checked':''}/>
+          <div>
+            <p class="text-white text-xs font-semibold">Allow Students to Self-Enroll</p>
+            <p class="text-slate-500 text-xs mt-0.5">Students you approve can enroll in this free course themselves.</p>
+          </div>
+        </label>
+      </div>
       <div><label class="lbl">Teacher</label><select id="cTeacher" class="inp"><option value="">Select Teacher</option>${tOpts}</select></div>
       <div><label class="lbl">New Banner</label><input type="file" accept="image/*" id="cBanner" class="inp py-2 text-xs"/></div>
-      <p class="text-xs text-slate-600">Join Code: <span class="mono text-emerald-400">${c.joinCode}</span></p>
-      <button onclick="saveCourse('${id}')" class="btn bp w-full justify-center mt-2">Save Changes</button>
+      <button onclick="saveCourse('${id}')" class="btn bp w-full justify-center mt-2">✅ Save Changes</button>
     </div>`);
+  setTimeout(()=>{ updateFreeEnrollVisibility(); updateDiscountPreviewLive(); }, 100);
 };
 
 window.saveCourse = async (id) => {
   const name=document.getElementById('cName').value.trim();
-  const subject=document.getElementById('cSubject').value.trim();
+  const category=document.getElementById('cCategory')?.value||'';
+  const description=document.getElementById('cDescription')?.value.trim()||'';
+  const features=document.getElementById('cFeatures')?.value.trim()||'';
   const duration=document.getElementById('cDuration').value.trim();
+  const startDate=document.getElementById('cStartDate').value;
+  const endDate=document.getElementById('cEndDate').value;
   const fees=parseFloat(document.getElementById('cFees').value)||0;
   const discountType=document.getElementById('cDiscountType')?.value||'amount';
   const discountAmount=parseFloat(document.getElementById('cDiscount')?.value)||0;
+  const selfEnrollEnabled=fees===0?(document.getElementById('cSelfEnroll')?.checked||false):false;
   const tEl=document.getElementById('cTeacher');
   const teacherId=tEl.value;
   const teacherName=tEl.options[tEl.selectedIndex]?.dataset.name||'';
   const bannerFile=document.getElementById('cBanner').files[0];
   if(!name) return toast('Course name required','error');
+  if(!startDate||!endDate) return toast('Start date and End date required','error');
+  if(endDate<=startDate) return toast('End date must be after start date','error');
   let bannerUrl=id?allCourses.find(c=>c.id===id)?.bannerUrl||'':'';
   if(bannerFile){
     toast('Uploading...','info');
@@ -1468,14 +1950,74 @@ window.saveCourse = async (id) => {
   const discountAmt = discountType==='percent' ? Math.round(fees*(discountAmount/100)) : discountAmount;
   const netFee = Math.max(0, fees - discountAmt);
   if(id){
-    await updateDoc(doc(db,'courses',id),{name,subject,duration,fees,discountType,discountAmount,discountAmt,netFee,teacherId,teacherName,bannerUrl,updatedAt:serverTimestamp()});
+    await updateDoc(doc(db,'courses',id),{name,category,description,features,duration,startDate,endDate,fees,discountType,discountAmount,discountAmt,netFee,selfEnrollEnabled,teacherId,teacherName,bannerUrl,updatedAt:serverTimestamp()});
     toast('Course updated!','success');
   } else {
     const joinCode=Math.random().toString(36).slice(2,8).toUpperCase();
-    await addDoc(collection(db,'courses'),{name,subject,duration,fees,discountType,discountAmount,discountAmt,netFee,teacherId,teacherName,joinCode,bannerUrl,createdAt:serverTimestamp()});
-    toast('Course created! Code: '+joinCode,'success');
+    await addDoc(collection(db,'courses'),{name,category,description,features,duration,startDate,endDate,fees,discountType,discountAmount,discountAmt,netFee,selfEnrollEnabled,teacherId,teacherName,joinCode,bannerUrl,createdAt:serverTimestamp()});
+    toast('Course created!','success');
   }
   closeModal();loadCourses();loadAll();
+};
+
+
+// ── COURSE DATE HELPERS ───────────────────────────────────────
+function getCourseStatus(course) {
+  if (!course.startDate || !course.endDate) return 'no-date';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(course.startDate);
+  const end = new Date(course.endDate);
+  if (today < start) return 'upcoming';
+  if (today > end) return 'expired';
+  return 'active';
+}
+
+function getCourseStatusText(startDate, endDate) {
+  if (!startDate || !endDate) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffDays = Math.round((end - start) / 86400000);
+  const months = Math.floor(diffDays / 30);
+  const days = diffDays % 30;
+  const durationText = months > 0 ? `${months} month${months>1?'s':''} ${days>0?days+' days':''}` : `${diffDays} days`;
+  if (today < start) {
+    const daysLeft = Math.ceil((start - today) / 86400000);
+    return `🕐 Upcoming — Starts in ${daysLeft} day${daysLeft!==1?'s':''} (${startDate}) · Duration: ${durationText.trim()}`;
+  }
+  if (today > end) {
+    return `⛔ Expired — Ended on ${endDate} · Total Duration: ${durationText.trim()}`;
+  }
+  const remaining = Math.ceil((end - today) / 86400000);
+  return `✅ Active — Ends in ${remaining} day${remaining!==1?'s':''} (${endDate}) · Duration: ${durationText.trim()}`;
+}
+
+function getCourseStatusBadge(course) {
+  const s = getCourseStatus(course);
+  if (s === 'upcoming') return `<span class="badge" style="background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);font-size:10px">🕐 Upcoming</span>`;
+  if (s === 'expired')  return `<span class="badge" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);font-size:10px">⛔ Expired</span>`;
+  if (s === 'active')   return `<span class="badge" style="background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25);font-size:10px">✅ Active</span>`;
+  return `<span class="badge" style="background:rgba(100,116,139,0.12);color:#94a3b8;border:1px solid rgba(100,116,139,0.2);font-size:10px">📅 No Date</span>`;
+}
+
+function getCourseStatusDateLine(course) {
+  if (!course.startDate && !course.endDate) return '';
+  const start = course.startDate || '—';
+  const end = course.endDate || '—';
+  return `<p class="text-slate-600 text-xs">📅 ${start} → ${end}</p>`;
+}
+
+window.updateCourseDurationPreview = () => {
+  const s = document.getElementById('cStartDate')?.value;
+  const e = document.getElementById('cEndDate')?.value;
+  const prev = document.getElementById('courseDatePreview');
+  if (!prev) return;
+  if (s && e) {
+    prev.textContent = getCourseStatusText(s, e);
+    prev.classList.remove('hidden');
+  } else {
+    prev.classList.add('hidden');
+  }
 };
 
 window.updateDiscountLabel = () => {
@@ -1902,7 +2444,7 @@ window.loadResults = async () => {
       <td class="mono text-xs text-slate-300">${s.totalMarks}/${s.totalMax}</td>
       <td><span class="badge ${pct>=75?'ba':pct>=50?'bw2':'br'} mono">${pct}%</span></td>
       <td class="font-display font-bold ${pct>=75?'text-emerald-400':pct>=50?'text-yellow-400':'text-red-400'}">${grade}</td>
-      <td><button onclick="viewStudentPerf('${s.id}')" class="btn bpk text-xs">Details</button></td>
+      <td><button onclick="viewStudentPerf('${s.id}')" class="btn bpk text-xs">Details</button> <button onclick="generateMarksheet('${s.id}','${document.getElementById('rankCourse').value}')" class="btn bp text-xs">🎓 Marksheet</button></td>
     </tr>`;
   }).join('');
 
@@ -2107,78 +2649,403 @@ window.deleteAllNotifs = async () => {
   toast('All notifications deleted','success');
 };
 
-// ── ID CARDS ──────────────────────────────────────────────────
+// ── ID CARDS — MULTI-STYLE CANVAS SYSTEM ─────────────────────
+
+// 5 ID Card styles — each matches a visual theme
+const ID_STYLES = [
+  {
+    // Style 0: Classic Beige (like uploaded image)
+    name: 'Classic Beige', emoji: '🏛️',
+    bg: '#f5efe6', headerBg: '#fff8f0', accentBg: '#6b3f1f',
+    accent: '#6b3f1f', accent2: '#8b5a2b', text: '#3d1f0a', subText: '#7a5230',
+    fieldLabel: '#4a2c10', fieldValue: '#1a0a00',
+    cornerColor: '#8b5a2b', corner2: '#6b3f1f',
+    titleColor: '#3d1f0a', cardTitle: 'STUDENT ID CARD',
+    font: 'Georgia', borderColor: '#8b5a2b',
+    logoPlaceholder: '🎓', instituteColor: '#3d1f0a',
+    photoBorderColor: '#8b5a2b', photoBg: '#e8d5c0',
+    signLineColor: '#3d1f0a', directorColor: '#3d1f0a',
+    preview: 'linear-gradient(135deg,#f5efe6,#e8d5c0)'
+  },
+  {
+    // Style 1: Deep Navy
+    name: 'Deep Navy', emoji: '🌊',
+    bg: '#0a1628', headerBg: '#0d1f3c',
+    accent: '#3b82f6', accent2: '#1d4ed8', text: '#ffffff', subText: '#94a3b8',
+    fieldLabel: '#60a5fa', fieldValue: '#e2e8f0',
+    cornerColor: '#3b82f6', corner2: '#1d4ed8',
+    titleColor: '#60a5fa', cardTitle: 'STUDENT ID CARD',
+    font: 'Arial', borderColor: '#3b82f6',
+    logoPlaceholder: '📘', instituteColor: '#60a5fa',
+    photoBorderColor: '#3b82f6', photoBg: '#1e3a5f',
+    signLineColor: '#3b82f6', directorColor: '#94a3b8',
+    preview: 'linear-gradient(135deg,#0a1628,#1d4ed8)'
+  },
+  {
+    // Style 2: Forest Green
+    name: 'Forest Green', emoji: '🌿',
+    bg: '#0d2310', headerBg: '#0f2d14',
+    accent: '#22c55e', accent2: '#16a34a', text: '#ffffff', subText: '#86efac',
+    fieldLabel: '#4ade80', fieldValue: '#dcfce7',
+    cornerColor: '#22c55e', corner2: '#15803d',
+    titleColor: '#4ade80', cardTitle: 'STUDENT ID CARD',
+    font: 'Arial', borderColor: '#22c55e',
+    logoPlaceholder: '🌱', instituteColor: '#4ade80',
+    photoBorderColor: '#22c55e', photoBg: '#14532d',
+    signLineColor: '#22c55e', directorColor: '#86efac',
+    preview: 'linear-gradient(135deg,#0d2310,#16a34a)'
+  },
+  {
+    // Style 3: Royal Purple
+    name: 'Royal Purple', emoji: '👑',
+    bg: '#1a0d2e', headerBg: '#200f38',
+    accent: '#a855f7', accent2: '#7c3aed', text: '#ffffff', subText: '#d8b4fe',
+    fieldLabel: '#c084fc', fieldValue: '#f3e8ff',
+    cornerColor: '#a855f7', corner2: '#6d28d9',
+    titleColor: '#c084fc', cardTitle: 'STUDENT ID CARD',
+    font: 'Arial', borderColor: '#a855f7',
+    logoPlaceholder: '👑', instituteColor: '#c084fc',
+    photoBorderColor: '#a855f7', photoBg: '#2e1065',
+    signLineColor: '#a855f7', directorColor: '#d8b4fe',
+    preview: 'linear-gradient(135deg,#1a0d2e,#7c3aed)'
+  },
+  {
+    // Style 4: Crimson Red
+    name: 'Crimson Red', emoji: '🔴',
+    bg: '#1c0505', headerBg: '#240707',
+    accent: '#ef4444', accent2: '#b91c1c', text: '#ffffff', subText: '#fca5a5',
+    fieldLabel: '#f87171', fieldValue: '#fee2e2',
+    cornerColor: '#ef4444', corner2: '#991b1b',
+    titleColor: '#f87171', cardTitle: 'STUDENT ID CARD',
+    font: 'Arial', borderColor: '#ef4444',
+    logoPlaceholder: '🔥', instituteColor: '#f87171',
+    photoBorderColor: '#ef4444', photoBg: '#450a0a',
+    signLineColor: '#ef4444', directorColor: '#fca5a5',
+    preview: 'linear-gradient(135deg,#1c0505,#b91c1c)'
+  }
+];
+
+// Course → style index mapping (stored in memory)
+const courseStyleMap = {};
+
+// Render style gallery thumbnails
+function renderIdStyleGallery() {
+  const el = document.getElementById('idStyleGallery');
+  if (!el) return;
+  el.innerHTML = ID_STYLES.map((s,i) => `
+    <div class="id-style-thumb cursor-pointer rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${selectedIdStyle===i?'border-emerald-400 ring-2 ring-emerald-400/30':'border-transparent'}" 
+         style="background:${s.preview};aspect-ratio:1.58;padding:10px;display:flex;flex-direction:column;justify-content:space-between;"
+         onclick="selectIdStyle(${i})">
+      <div style="font-size:11px;font-weight:bold;color:${i===0?'#3d1f0a':'#fff'};opacity:0.9">${s.emoji} ${s.name}</div>
+      <div style="font-size:9px;color:${i===0?'#7a5230':'rgba(255,255,255,0.6)'};border-top:1px solid ${s.accent};padding-top:4px;margin-top:4px">Style ${i+1}</div>
+    </div>`).join('');
+}
+
+let selectedIdStyle = 0;
+window.selectIdStyle = (idx) => {
+  selectedIdStyle = idx;
+  const overSel = document.getElementById('idStyleOverride');
+  if (overSel) overSel.value = String(idx);
+  renderIdStyleGallery();
+  previewIDCard();
+};
+
+// Get style for a user
+function getStyleForUser(user, overrideIdx) {
+  if (overrideIdx !== '' && overrideIdx !== undefined && overrideIdx !== null) return ID_STYLES[parseInt(overrideIdx)] || ID_STYLES[0];
+  // Auto: hash course name to style
+  const courseName = user.courseAssigned || user.course || '';
+  if (courseStyleMap[courseName] !== undefined) return ID_STYLES[courseStyleMap[courseName]];
+  let hash = 0;
+  for (let c of courseName) hash = (hash*31 + c.charCodeAt(0)) & 0xff;
+  return ID_STYLES[hash % ID_STYLES.length];
+}
+
+// Draw ID card on a canvas element — MAIN RENDER FUNCTION
+async function drawIdCard(canvas, user, style) {
+  // Card: 510×324px (6× of 85×54mm)
+  const W = 510, H = 324;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const isLight = style.name === 'Classic Beige';
+
+  // ── Background
+  ctx.fillStyle = style.bg;
+  ctx.fillRect(0,0,W,H);
+
+  // ── Header bar (top strip)
+  ctx.fillStyle = style.headerBg;
+  ctx.fillRect(0,0,W,62);
+
+  // ── Top-right geometric corner decoration
+  drawCornerTR(ctx, W, style.cornerColor, style.corner2, isLight);
+
+  // ── Bottom-left geometric corner
+  drawCornerBL(ctx, H, style.cornerColor, style.corner2, isLight);
+
+  // ── Logo area (top-left)
+  ctx.fillStyle = isLight ? '#fff8f0' : 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.roundRect(14,10,42,42,6); ctx.fill();
+  ctx.font = 'bold 22px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(style.logoPlaceholder, 35, 38);
+
+  // ── Institute name
+  ctx.textAlign = 'left';
+  ctx.fillStyle = style.instituteColor;
+  ctx.font = `bold 11px Arial`;
+  ctx.fillText('VISION IT COMPUTER INSTITUTE', 64, 28);
+  ctx.fillStyle = isLight ? style.subText : 'rgba(255,255,255,0.45)';
+  ctx.font = '8.5px Arial';
+  ctx.fillText('Pratappur, Surajpur, Chhattisgarh', 64, 42);
+
+  // ── Header separator line
+  ctx.strokeStyle = style.accent;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(14,64); ctx.lineTo(W-14,64); ctx.stroke();
+
+  // ── CARD TITLE
+  ctx.textAlign = 'right';
+  ctx.fillStyle = style.titleColor;
+  ctx.font = `bold 22px ${isLight?'Georgia':'Arial'}`;
+  ctx.fillText('STUDENT ID CARD', W-20, 105);
+
+  // ── Photo box (left side)
+  const photoX = 18, photoY = 78, photoW = 130, photoH = 158;
+  // Photo border with shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = style.photoBorderColor;
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(photoX, photoY, photoW, photoH);
+  ctx.shadowBlur = 0;
+
+  // Photo bg fill
+  ctx.fillStyle = style.photoBg;
+  ctx.fillRect(photoX+1.25, photoY+1.25, photoW-2.5, photoH-2.5);
+
+  // Draw photo if available
+  if (user.profileImage && user.profileImage.startsWith('http')) {
+    try {
+      const img = await loadImage(user.profileImage);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(photoX+1.25, photoY+1.25, photoW-2.5, photoH-2.5);
+      ctx.clip();
+      // Cover-fit: scale to fill
+      const iRatio = img.width/img.height;
+      const bRatio = (photoW-2.5)/(photoH-2.5);
+      let sw=photoW-2.5, sh=photoH-2.5, sx=photoX+1.25, sy=photoY+1.25;
+      if(iRatio>bRatio){ sh=photoH-2.5; sw=sh*iRatio; sx=photoX+1.25-(sw-(photoW-2.5))/2; }
+      else { sw=photoW-2.5; sh=sw/iRatio; sy=photoY+1.25-(sh-(photoH-2.5))/2; }
+      ctx.drawImage(img, sx, sy, sw, sh);
+      ctx.restore();
+    } catch(e) {
+      drawPhotoPlaceholder(ctx, photoX, photoY, photoW, photoH, style);
+    }
+  } else {
+    // Avatar placeholder
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name||'User')}&background=${style.accent.replace('#','')}&color=fff&size=200&bold=true`;
+    try {
+      const img = await loadImage(avatarUrl);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(photoX+1.25, photoY+1.25, photoW-2.5, photoH-2.5); ctx.clip();
+      ctx.drawImage(img, photoX+1.25, photoY+1.25, photoW-2.5, photoH-2.5);
+      ctx.restore();
+    } catch(e) { drawPhotoPlaceholder(ctx, photoX, photoY, photoW, photoH, style); }
+  }
+
+  // ── Fields (right side)
+  const fx = 165, fy0 = 82, fGap = 22;
+  const fields = [
+    ['ID NO', user.userId||''],
+    ['STUDENT NAME', user.name||''],
+    ['FATHER NAME', user.guardianName||user.fatherName||''],
+    ['DATE OF BIRTH', user.dob||''],
+    ['COURSE', user.courseAssigned||user.course||''],
+    ['EMAIL', user.email||''],
+    ['MOBILE NO', user.phone||''],
+    ['ADDRESS', (user.address||'').slice(0,28)]
+  ];
+
+  fields.forEach(([label, val], i) => {
+    const y = fy0 + i * fGap;
+    ctx.textAlign = 'left';
+    ctx.font = `bold 9px Arial`;
+    ctx.fillStyle = style.fieldLabel;
+    ctx.fillText(label, fx, y);
+    ctx.fillStyle = isLight ? style.subText : 'rgba(255,255,255,0.35)';
+    ctx.fillText(':', fx+110, y);
+    ctx.font = `9px Arial`;
+    ctx.fillStyle = style.fieldValue;
+    ctx.fillText(val, fx+120, y);
+  });
+
+  // ── Bottom area: signature + validity
+  const botY = 256;
+  // Director signature line
+  ctx.strokeStyle = style.signLineColor;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(photoX, botY); ctx.lineTo(photoX+photoW, botY); ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 8px Arial';
+  ctx.fillStyle = style.directorColor;
+  ctx.fillText('DIRECTOR', photoX + photoW/2, botY+14);
+
+  // Institute stamp / watermark
+  ctx.globalAlpha = 0.06;
+  ctx.font = 'bold 28px Arial';
+  ctx.fillStyle = style.accent;
+  ctx.textAlign = 'center';
+  ctx.fillText('VISION IT', W/2+60, H/2+20);
+  ctx.globalAlpha = 1;
+
+  // ── Footer bar
+  ctx.fillStyle = style.accent;
+  ctx.fillRect(0, H-22, W, 22);
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 8px Arial';
+  ctx.fillStyle = isLight ? '#fff8f0' : '#ffffff';
+  ctx.fillText('✦  visionitinstitute.com  ✦  Pratappur, Surajpur, CG  ✦  Vision IT Computer Institute  ✦', W/2, H-8);
+
+  // ── Outer border
+  ctx.strokeStyle = style.borderColor;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1,1,W-2,H-2);
+}
+
+// Geometric corner — top right
+function drawCornerTR(ctx, W, c1, c2, isLight) {
+  ctx.save();
+  // Big triangle
+  ctx.fillStyle = c2;
+  ctx.globalAlpha = isLight ? 0.7 : 0.5;
+  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W-110,0); ctx.lineTo(W,70); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = c1;
+  ctx.globalAlpha = isLight ? 0.9 : 0.7;
+  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W-60,0); ctx.lineTo(W,45); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// Geometric corner — bottom left
+function drawCornerBL(ctx, H, c1, c2, isLight) {
+  ctx.save();
+  ctx.fillStyle = c2;
+  ctx.globalAlpha = isLight ? 0.65 : 0.45;
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(100,H); ctx.lineTo(0,H-60); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = c1;
+  ctx.globalAlpha = isLight ? 0.85 : 0.65;
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(55,H); ctx.lineTo(0,H-35); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawPhotoPlaceholder(ctx, x, y, w, h, style) {
+  ctx.fillStyle = style.accent + '30';
+  ctx.fillRect(x+1.25, y+1.25, w-2.5, h-2.5);
+  ctx.textAlign = 'center';
+  ctx.font = '40px serif';
+  ctx.fillText('👤', x+w/2, y+h/2+10);
+}
+
+function loadImage(src) {
+  return new Promise((res,rej) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error('img load failed'));
+    img.src = src;
+  });
+}
+
+// Render preview
+let previewUser = null, previewCanvas = null;
+window.previewIDCard = async () => {
+  const userId = document.getElementById('idCardUser').value;
+  if (!userId) return;
+  const overrideVal = document.getElementById('idStyleOverride')?.value;
+  const d = await getDoc(doc(db,'users',userId));
+  if (!d.exists()) return;
+  previewUser = d.data();
+  const style = getStyleForUser(previewUser, overrideVal !== '' ? overrideVal : selectedIdStyle);
+  const wrap = document.getElementById('idCardPreviewWrap');
+  const previewDiv = document.getElementById('idCardPreview');
+  if (!previewCanvas) {
+    previewCanvas = document.createElement('canvas');
+    previewDiv.innerHTML = '';
+    previewDiv.appendChild(previewCanvas);
+  }
+  previewCanvas.style.width = '100%'; previewCanvas.style.height = '100%';
+  await drawIdCard(previewCanvas, previewUser, style);
+};
+
 window.loadIdCardUsers = async () => {
-  const type=document.getElementById('idCardType').value;
-  const snap=await getDocs(query(collection(db,'users'),where('role','==',type)));
-  document.getElementById('idCardUser').innerHTML=snap.docs.map(d=>`<option value="${d.id}">${d.data().name} (${d.id})</option>`).join('');
+  const type = document.getElementById('idCardType').value;
+  const snap = await getDocs(query(collection(db,'users'),where('role','==',type)));
+  document.getElementById('idCardUser').innerHTML = snap.docs.map(d=>`<option value="${d.id}">${d.data().name} (${d.id})</option>`).join('');
+  previewIDCard();
 };
 
 function populateBulkIdCourses() {
-  document.getElementById('bulkIdCourse').innerHTML='<option value="">All Courses</option>'+allCourses.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  document.getElementById('bulkIdCourse').innerHTML = '<option value="">All Courses</option>' + allCourses.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
 }
 
-window.generateIDCard = async () => {
-  const userId=document.getElementById('idCardUser').value;
-  if(!userId) return toast('Select a user','error');
-  const d=await getDoc(doc(db,'users',userId));
-  if(!d.exists()) return;
-  generateIDCardPDF(d.data());
-  toast('ID Card generated!','success');
+// Download single card as PDF
+window.downloadIDCard = async () => {
+  const userId = document.getElementById('idCardUser').value;
+  if (!userId) return toast('Select a user','error');
+  const overrideVal = document.getElementById('idStyleOverride')?.value;
+  const d = await getDoc(doc(db,'users',userId));
+  if (!d.exists()) return;
+  const user = d.data();
+  const style = getStyleForUser(user, overrideVal !== '' ? overrideVal : selectedIdStyle);
+
+  toast('Generating ID Card...','success');
+  const canvas = document.createElement('canvas');
+  await drawIdCard(canvas, user, style);
+  const imgData = canvas.toDataURL('image/png', 1.0);
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:[85,54]});
+  pdf.addImage(imgData,'PNG',0,0,85,54);
+  pdf.save('IDCard_'+user.userId+'.pdf');
+  toast('ID Card downloaded!','success');
 };
 
-function generateIDCardPDF(user) {
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:[85,54]});
-  pdf.setFillColor(2,8,23);pdf.rect(0,0,85,54,'F');
-  pdf.setFillColor(15,23,42);pdf.rect(0,0,85,16,'F');
-  pdf.setDrawColor(110,231,183);pdf.setLineWidth(0.4);pdf.rect(1,1,83,52);
-  pdf.setTextColor(110,231,183);pdf.setFontSize(6.5);pdf.setFont('helvetica','bold');
-  pdf.text('VISION IT COMPUTER INSTITUTE',42.5,6.5,{align:'center'});
-  pdf.setFontSize(4.5);pdf.setTextColor(148,163,184);
-  pdf.text(user.role.toUpperCase()+' IDENTITY CARD',42.5,11,{align:'center'});
-  pdf.setDrawColor(110,231,183);pdf.line(5,16,80,16);
-  pdf.setTextColor(255,255,255);pdf.setFontSize(8.5);pdf.setFont('helvetica','bold');
-  pdf.text(user.name,42.5,22,{align:'center'});
-  pdf.setFontSize(5.5);pdf.setTextColor(148,163,184);pdf.setFont('helvetica','normal');
-  pdf.text('ID: '+user.userId,42.5,27.5,{align:'center'});
-  if(user.courseAssigned)pdf.text('Course: '+user.courseAssigned,42.5,32.5,{align:'center'});
-  if(user.phone)pdf.text('Ph: '+user.phone,42.5,37,{align:'center'});
-  if(user.qualification)pdf.text(user.qualification,42.5,41,{align:'center'});
-  pdf.setFontSize(4.5);pdf.setTextColor(110,231,183);
-  pdf.text('visionitinstitute.com',42.5,48.5,{align:'center'});
-  pdf.save('idcard_'+user.userId+'.pdf');
-}
+// Legacy alias
+window.generateIDCard = window.downloadIDCard;
 
+// Bulk generation
 window.generateBulkIDCards = async () => {
-  const type=document.getElementById('bulkIdType').value;
-  const course=document.getElementById('bulkIdCourse').value;
-  const snap=await getDocs(query(collection(db,'users'),where('role','==',type)));
-  let users=snap.docs.map(d=>d.data());
-  if(course&&type==='student') users=users.filter(u=>u.courseAssigned===course);
-  if(!users.length) return toast('No users found','error');
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:[85,54]});
-  users.forEach((user,i)=>{
-    if(i>0)pdf.addPage([85,54],'landscape');
-    pdf.setFillColor(2,8,23);pdf.rect(0,0,85,54,'F');
-    pdf.setFillColor(15,23,42);pdf.rect(0,0,85,16,'F');
-    pdf.setDrawColor(110,231,183);pdf.setLineWidth(0.4);pdf.rect(1,1,83,52);
-    pdf.setTextColor(110,231,183);pdf.setFontSize(6.5);pdf.setFont('helvetica','bold');
-    pdf.text('VISION IT COMPUTER INSTITUTE',42.5,6.5,{align:'center'});
-    pdf.setFontSize(4.5);pdf.setTextColor(148,163,184);
-    pdf.text(user.role.toUpperCase()+' IDENTITY CARD',42.5,11,{align:'center'});
-    pdf.setDrawColor(110,231,183);pdf.line(5,16,80,16);
-    pdf.setTextColor(255,255,255);pdf.setFontSize(8.5);pdf.setFont('helvetica','bold');
-    pdf.text(user.name,42.5,22,{align:'center'});
-    pdf.setFontSize(5.5);pdf.setTextColor(148,163,184);pdf.setFont('helvetica','normal');
-    pdf.text('ID: '+user.userId,42.5,27.5,{align:'center'});
-    if(user.courseAssigned)pdf.text('Course: '+user.courseAssigned,42.5,32.5,{align:'center'});
-    if(user.phone)pdf.text('Ph: '+user.phone,42.5,37,{align:'center'});
-    pdf.setFontSize(4.5);pdf.setTextColor(110,231,183);pdf.text('visionitinstitute.com',42.5,48.5,{align:'center'});
-  });
-  pdf.save('bulk_idcards_'+type+'.pdf');toast('Bulk ID Cards generated ('+users.length+')!','success');
+  const type = document.getElementById('bulkIdType').value;
+  const course = document.getElementById('bulkIdCourse').value;
+  const bulkStyleVal = document.getElementById('bulkIdStyle').value;
+  const snap = await getDocs(query(collection(db,'users'),where('role','==',type)));
+  let users = snap.docs.map(d=>({...d.data(),_docId:d.id}));
+  if (course && type==='student') users = users.filter(u=>u.courseAssigned===course);
+  if (!users.length) return toast('No users found','error');
+  toast(`Generating ${users.length} ID Cards... please wait`,'success');
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:[85,54]});
+  for (let i=0; i<users.length; i++) {
+    const u = users[i];
+    const styleIdx = bulkStyleVal==='auto' ? i%ID_STYLES.length : parseInt(bulkStyleVal);
+    const style = getStyleForUser(u, bulkStyleVal==='auto'?null:styleIdx) || ID_STYLES[styleIdx];
+    const canvas = document.createElement('canvas');
+    await drawIdCard(canvas, u, style);
+    const imgData = canvas.toDataURL('image/png',1.0);
+    if (i>0) pdf.addPage([85,54],'landscape');
+    pdf.addImage(imgData,'PNG',0,0,85,54);
+  }
+  pdf.save('BulkIDCards_'+type+'_'+Date.now()+'.pdf');
+  toast(`${users.length} ID Cards generated!`,'success');
 };
+
+// Init gallery on load
+setTimeout(() => { renderIdStyleGallery(); }, 500);
+
 
 // ── CERTIFICATES ──────────────────────────────────────────────
 async function loadCertSelects() {
@@ -2192,6 +3059,9 @@ async function loadCertSelects() {
   document.getElementById('certDate').value=today;
   document.getElementById('bulkCertDate').value=today;
 }
+// Aliases for backward compatibility
+function populateCertFilters() { loadCertSelects(); }
+function loadIssuedCerts() { /* certs loaded via loadCertSelects */ }
 
 function buildCertPDF(pdf,studentName,studentId,courseName,date,certNum){
   pdf.setFillColor(2,8,23);pdf.rect(0,0,297,210,'F');
@@ -2259,6 +3129,46 @@ window.generateBulkCerts = async () => {
   toast('Bulk certificates ('+enrollments.length+') generated!','success');
 };
 
+// ── BATCH DAY SELECTOR HELPERS ────────────────────────────────
+window.toggleDayBtn = (day) => {
+  const el = document.getElementById('bdl_'+day);
+  if(!el) return;
+  const active = el.style.background.includes('#6ee7b7') || el.style.background.includes('rgb(110, 231, 183)');
+  if(active) {
+    el.style.background='rgba(255,255,255,0.04)';
+    el.style.color='rgb(100,116,139)';
+    el.style.fontWeight='600';
+  } else {
+    el.style.background='#6ee7b7';
+    el.style.color='#0f172a';
+    el.style.fontWeight='800';
+  }
+};
+
+window.setDayPreset = (preset) => {
+  const all=['mon','tue','wed','thu','fri','sat','sun'];
+  const presets={
+    weekdays:['mon','tue','wed','thu','fri'],
+    weekend:['sat','sun'],
+    alt:['mon','wed','fri'],
+    daily:['mon','tue','wed','thu','fri','sat','sun']
+  };
+  const active=new Set(presets[preset]||[]);
+  all.forEach(d=>{
+    const el=document.getElementById('bdl_'+d);
+    if(!el) return;
+    if(active.has(d)){
+      el.style.background='#6ee7b7';
+      el.style.color='#0f172a';
+      el.style.fontWeight='800';
+    } else {
+      el.style.background='rgba(255,255,255,0.04)';
+      el.style.color='rgb(100,116,139)';
+      el.style.fontWeight='600';
+    }
+  });
+};
+
 // ── BATCHES ───────────────────────────────────────────────────
 function populateBatchFilters() {
   const sel=document.getElementById('batchCourseFilter');
@@ -2279,6 +3189,12 @@ window.loadBatches = async () => {
   grid.innerHTML=batches.map(b=>{
     const stCount=(b.studentIds||[]).length;
     const statusColor={active:'ba',completed:'bp2',upcoming:'bw2'}[b.status]||'ba';
+    const dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const dayKeys=['mon','tue','wed','thu','fri','sat','sun'];
+    const days=b.weekDays||{};
+    const activeDays=dayKeys.filter(d=>days[d]);
+    const dayChips=activeDays.length ? activeDays.map(d=>`<span class="px-1.5 py-0.5 rounded text-xs font-semibold" style="background:rgba(110,231,183,0.12);color:#6ee7b7">${d.charAt(0).toUpperCase()+d.slice(1)}</span>`).join('') : '<span class="text-slate-700 text-xs">No days set</span>';
+    const timing = b.timeFrom&&b.timeTo ? `${b.timeFrom} – ${b.timeTo}` : (b.timeFrom||b.timeTo||'');
     return `<div class="gc p-5 hover:border-emerald-400/25 transition-all">
       <div class="flex items-start justify-between mb-3">
         <div>
@@ -2287,17 +3203,20 @@ window.loadBatches = async () => {
         </div>
         <span class="badge ${statusColor}">${b.status||'active'}</span>
       </div>
-      <div class="space-y-1.5 mb-4">
+      <div class="space-y-2 mb-4">
         <div class="flex items-center justify-between text-xs"><span class="text-slate-500">Students</span><span class="text-emerald-400 font-bold">${stCount}</span></div>
-        ${b.startDate?`<div class="flex items-center justify-between text-xs"><span class="text-slate-500">Start</span><span class="text-slate-300">${b.startDate}</span></div>`:''}
-        ${b.endDate?`<div class="flex items-center justify-between text-xs"><span class="text-slate-500">End</span><span class="text-slate-300">${b.endDate}</span></div>`:''}
         ${b.teacher?`<div class="flex items-center justify-between text-xs"><span class="text-slate-500">Teacher</span><span class="text-indigo-400">${b.teacher}</span></div>`:''}
-        ${b.description?`<p class="text-slate-600 text-xs italic">${b.description}</p>`:''}
+        ${timing?`<div class="flex items-center justify-between text-xs"><span class="text-slate-500">⏰ Time</span><span class="text-yellow-300 font-semibold">${timing}</span></div>`:''}
+        <div>
+          <p class="text-slate-500 text-xs mb-1.5">📅 Class Days</p>
+          <div class="flex flex-wrap gap-1">${dayChips}</div>
+        </div>
+        ${b.description?`<p class="text-slate-600 text-xs italic mt-1">${b.description}</p>`:''}
       </div>
       <div class="flex gap-2 flex-wrap">
-        <button onclick="viewBatch('${b.id}')" class="btn bg text-xs flex-1 justify-center">View Students</button>
-        <button onclick="editBatch('${b.id}')" class="btn bs text-xs">Edit</button>
-        <button onclick="deleteBatch('${b.id}')" class="btn bd text-xs">Delete</button>
+        <button onclick="viewBatch('${b.id}')" class="btn bg text-xs flex-1 justify-center">👥 Students</button>
+        <button onclick="editBatch('${b.id}')" class="btn bs text-xs">✏️ Edit</button>
+        <button onclick="deleteBatch('${b.id}')" class="btn bd text-xs">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -2308,35 +3227,86 @@ window.openAddBatch = async () => {
   const cOpts=cSnap.docs.map(d=>`<option value="${d.id}" data-name="${d.data().name}">${d.data().name}</option>`).join('');
   const tSnap=await getDocs(query(collection(db,'users'),where('role','==','teacher')));
   const tOpts=tSnap.docs.map(d=>`<option value="${d.data().name}">${d.data().name}</option>`).join('');
-  showModal(`<h3 class="text-lg font-display font-bold text-white mb-5">Create New Batch</h3>
+  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">Create New Batch</h3>
     <div class="space-y-3">
-      <div><label class="lbl">Batch Name *</label><input id="bName" class="inp" placeholder="e.g. Morning Batch A, Evening Batch 2024"/></div>
+      <div><label class="lbl">Batch Name *</label><input id="bName" class="inp" placeholder="e.g. Morning Batch A, Evening Batch"/></div>
       <div><label class="lbl">Course *</label><select id="bCourse" class="inp"><option value="">Select Course</option>${cOpts}</select></div>
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="lbl">Start Date</label><input id="bStart" class="inp" type="date"/></div>
-        <div><label class="lbl">End Date</label><input id="bEnd" class="inp" type="date"/></div>
-      </div>
       <div><label class="lbl">Assign Teacher</label><select id="bTeacher" class="inp"><option value="">Select Teacher</option>${tOpts}</select></div>
       <div><label class="lbl">Status</label>
         <select id="bStatus" class="inp"><option value="upcoming">Upcoming</option><option value="active" selected>Active</option><option value="completed">Completed</option></select>
       </div>
+            <!-- Week Days Selector -->
+      <div>
+        <label class="lbl">📅 Class Days *</label>
+        <div class="grid grid-cols-7 gap-1 mt-1" id="weekDaysSelector">
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_mon" class="hidden peer" value="mon"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_mon" onclick="toggleDayBtn('mon')">Mon</div>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_tue" class="hidden peer" value="tue"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_tue" onclick="toggleDayBtn('tue')">Tue</div>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_wed" class="hidden peer" value="wed"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_wed" onclick="toggleDayBtn('wed')">Wed</div>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_thu" class="hidden peer" value="thu"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_thu" onclick="toggleDayBtn('thu')">Thu</div>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_fri" class="hidden peer" value="fri"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_fri" onclick="toggleDayBtn('fri')">Fri</div>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_sat" class="hidden peer" value="sat"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_sat" onclick="toggleDayBtn('sat')">Sat</div>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer">
+            <input type="checkbox" id="bd_sun" class="hidden peer" value="sun"/>
+            <div class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all peer-checked:text-emerald-900 text-slate-500 peer-checked:font-bold" style="background:rgba(255,255,255,0.04)" id="bdl_sun" onclick="toggleDayBtn('sun')">Sun</div>
+          </label>
+        </div>
+        <div class="flex gap-2 mt-1.5">
+          <button type="button" onclick="setDayPreset('weekdays')" class="btn bs text-xs">Mon–Fri</button>
+          <button type="button" onclick="setDayPreset('weekend')" class="btn bs text-xs">Sat–Sun</button>
+          <button type="button" onclick="setDayPreset('alt')" class="btn bs text-xs">Alt Days</button>
+          <button type="button" onclick="setDayPreset('daily')" class="btn bs text-xs">Daily</button>
+        </div>
+      </div>
+      <!-- Class Timing -->
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">⏰ Time From</label><input id="bTimeFrom" class="inp" type="time"/></div>
+        <div><label class="lbl">⏰ Time To</label><input id="bTimeTo" class="inp" type="time"/></div>
+      </div>
       <div><label class="lbl">Description</label><input id="bDesc" class="inp" placeholder="Optional batch description"/></div>
     </div>
-    <button onclick="saveBatch(null)" class="btn bp w-full justify-center mt-5">Create Batch</button>`);
+    <button onclick="saveBatch(null)" class="btn bp w-full justify-center mt-4">Create Batch</button>`);
 };
 
 window.saveBatch = async (id) => {
   const name=document.getElementById('bName').value.trim();
   const cEl=document.getElementById('bCourse');
   const courseId=cEl.value;
-  const courseName=cEl.options[cEl.selectedIndex]?.dataset.name||'';
-  const startDate=document.getElementById('bStart').value;
-  const endDate=document.getElementById('bEnd').value;
+  const courseName=cEl.options[cEl.selectedIndex]?.dataset.name||cEl.options[cEl.selectedIndex]?.text||'';
   const teacher=document.getElementById('bTeacher').value;
   const status=document.getElementById('bStatus').value;
   const description=document.getElementById('bDesc').value.trim();
+  const timeFrom=document.getElementById('bTimeFrom')?.value||'';
+  const timeTo=document.getElementById('bTimeTo')?.value||'';
+  // Collect weekDays
+  const dayKeys=['mon','tue','wed','thu','fri','sat','sun'];
+  const weekDays={};
+  dayKeys.forEach(d=>{
+    const el=document.getElementById('bdl_'+d);
+    // Active day has emerald background set via style
+    weekDays[d]=el ? el.style.background.includes('#6ee7b7')||el.style.background.includes('rgb(110, 231, 183)') : false;
+  });
+  const hasAnyDay=Object.values(weekDays).some(Boolean);
   if(!name||!courseId) return toast('Batch name and course required','error');
-  const data={name,courseId,courseName,startDate,endDate,teacher,status,description,updatedAt:serverTimestamp()};
+  if(!hasAnyDay) return toast('Select at least one class day','error');
+  const data={name,courseId,courseName,teacher,status,description,weekDays,timeFrom,timeTo,updatedAt:serverTimestamp()};
   if(id) {
     await updateDoc(doc(db,'batches',id),data);
     toast('Batch updated!','success');
@@ -2355,14 +3325,10 @@ window.editBatch = async (id) => {
   const cOpts=cSnap.docs.map(doc=>`<option value="${doc.id}" data-name="${doc.data().name}" ${b.courseId===doc.id?'selected':''}>${doc.data().name}</option>`).join('');
   const tSnap=await getDocs(query(collection(db,'users'),where('role','==','teacher')));
   const tOpts=tSnap.docs.map(doc=>`<option value="${doc.data().name}" ${b.teacher===doc.data().name?'selected':''}>${doc.data().name}</option>`).join('');
-  showModal(`<h3 class="text-lg font-display font-bold text-white mb-5">Edit Batch: ${b.name}</h3>
+  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">Edit Batch: ${b.name}</h3>
     <div class="space-y-3">
       <div><label class="lbl">Batch Name</label><input id="bName" class="inp" value="${b.name}"/></div>
       <div><label class="lbl">Course</label><select id="bCourse" class="inp"><option value="">Select Course</option>${cOpts}</select></div>
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="lbl">Start Date</label><input id="bStart" class="inp" type="date" value="${b.startDate||''}"/></div>
-        <div><label class="lbl">End Date</label><input id="bEnd" class="inp" type="date" value="${b.endDate||''}"/></div>
-      </div>
       <div><label class="lbl">Assign Teacher</label><select id="bTeacher" class="inp"><option value="">Select Teacher</option>${tOpts}</select></div>
       <div><label class="lbl">Status</label>
         <select id="bStatus" class="inp">
@@ -2371,9 +3337,27 @@ window.editBatch = async (id) => {
           <option value="completed" ${b.status==='completed'?'selected':''}>Completed</option>
         </select>
       </div>
+            <!-- Week Days Selector -->
+      <div>
+        <label class="lbl">📅 Class Days *</label>
+        <div class="grid grid-cols-7 gap-1 mt-1">
+          ${['mon','tue','wed','thu','fri','sat','sun'].map(d=>{const wd=(b.weekDays||{});return `<label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="bd_${d}" class="hidden"/><div id="bdl_${d}" class="w-full text-center py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${wd[d]?'text-emerald-900':'text-slate-500'}" style="${wd[d]?'background:#6ee7b7;color:#0f172a':'background:rgba(255,255,255,0.04)'}" onclick="toggleDayBtn('${d}')">${d.charAt(0).toUpperCase()+d.slice(1)}</div></label>`;}).join('')}
+        </div>
+        <div class="flex gap-2 mt-1.5">
+          <button type="button" onclick="setDayPreset('weekdays')" class="btn bs text-xs">Mon–Fri</button>
+          <button type="button" onclick="setDayPreset('weekend')" class="btn bs text-xs">Sat–Sun</button>
+          <button type="button" onclick="setDayPreset('alt')" class="btn bs text-xs">Alt Days</button>
+          <button type="button" onclick="setDayPreset('daily')" class="btn bs text-xs">Daily</button>
+        </div>
+      </div>
+      <!-- Class Timing -->
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">⏰ Time From</label><input id="bTimeFrom" class="inp" type="time" value="${b.timeFrom||''}"/></div>
+        <div><label class="lbl">⏰ Time To</label><input id="bTimeTo" class="inp" type="time" value="${b.timeTo||''}"/></div>
+      </div>
       <div><label class="lbl">Description</label><input id="bDesc" class="inp" value="${b.description||''}"/></div>
     </div>
-    <button onclick="saveBatch('${id}')" class="btn bp w-full justify-center mt-5">Save Changes</button>`);
+    <button onclick="saveBatch('${id}')" class="btn bp w-full justify-center mt-4">Save Changes</button>`);
 };
 
 window.viewBatch = async (batchId) => {
@@ -2422,11 +3406,10 @@ window.deleteBatch = async (id) => {
 };
 
 // ── CURRICULUM MONITOR (Admin) ───────────────────────────────
-let adminCurCache = []; // all curriculum docs
-let adminCurSelected = null;
+let adminCurCache = []; // grouped by courseId+teacherId
+let adminCurSelected = null; // {courseId, teacherId, courseName, teacherName}
 
 async function initAdminCurriculum() {
-  // Populate filters
   const cSel = document.getElementById('adCurCourse');
   const tSel = document.getElementById('adCurTeacher');
   cSel.innerHTML = '<option value="">All Courses</option>' + allCourses.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
@@ -2436,95 +3419,143 @@ async function initAdminCurriculum() {
 }
 
 window.loadAdminCurriculum = async () => {
-  const courseId = document.getElementById('adCurCourse').value;
-  const teacherId = document.getElementById('adCurTeacher').value;
+  const courseIdF = document.getElementById('adCurCourse').value;
+  const teacherIdF = document.getElementById('adCurTeacher').value;
   const grid = document.getElementById('adCurGrid');
-  grid.innerHTML = '<div class="gc p-6 text-center text-slate-600 col-span-full">Loading curricula...</div>';
+  grid.innerHTML = '<div class="gc p-6 text-center text-slate-600 col-span-full">⏳ Loading curricula...</div>';
   document.getElementById('adCurDetail').style.display = 'none';
 
-  let q = collection(db,'curriculum');
-  const snap = await getDocs(q);
-  let curricula = snap.docs.map(d=>({id:d.id,...d.data()}));
-  if (courseId) curricula = curricula.filter(c=>c.courseId===courseId);
-  if (teacherId) curricula = curricula.filter(c=>c.teacherId===teacherId);
+  try {
+    // Load all modules (curriculumUnits) — teacher saves courseId + teacherId directly
+    let qRef = collection(db,'curriculumUnits');
+    const snap = await getDocs(qRef);
+    let modules = snap.docs.map(d=>({id:d.id,...d.data()}));
 
-  adminCurCache = curricula;
-  if (!curricula.length) {
-    grid.innerHTML = '<div class="gc p-8 text-center col-span-full"><div class="text-4xl mb-3">📋</div><p class="text-slate-500">No curriculum found for selected filters.</p></div>';
-    return;
-  }
+    // Apply filters
+    if (courseIdF) modules = modules.filter(m=>m.courseId===courseIdF);
+    if (teacherIdF) modules = modules.filter(m=>m.teacherId===teacherIdF);
 
-  // Load unit/lesson counts for each curriculum
-  const cards = await Promise.all(curricula.map(async cur => {
-    const uSnap = await getDocs(query(collection(db,'curriculumUnits'),where('curriculumId','==',cur.id)));
-    const units = uSnap.docs;
-    let totalL=0, doneL=0;
-    for (const u of units) {
-      const lSnap = await getDocs(query(collection(db,'curriculumLessons'),where('unitId','==',u.id)));
-      totalL += lSnap.size;
-      doneL += lSnap.docs.filter(d=>d.data().status==='done').length;
+    if (!modules.length) {
+      grid.innerHTML = '<div class="gc p-8 text-center col-span-full"><div class="text-4xl mb-3">📋</div><p class="text-slate-500">No curriculum found. Teacher ne abhi koi module add nahi kiya hai.</p></div>';
+      return;
     }
-    const pct = totalL ? Math.round(doneL/totalL*100) : 0;
-    return {cur, unitCount:units.length, totalL, doneL, pct};
-  }));
 
-  grid.innerHTML = cards.map(({cur,unitCount,totalL,doneL,pct}) => `
-    <div class="cur-progress-card" onclick="openAdminCurDetail('${cur.id}')">
-      <div class="flex items-start justify-between gap-2 mb-3">
-        <div class="flex-1 min-w-0">
-          <p class="text-white font-bold text-sm leading-snug truncate">${cur.title||cur.courseName}</p>
-          <p class="text-slate-500 text-xs mt-0.5">${[cur.subject,cur.level].filter(Boolean).join(' · ')}</p>
+    // Group modules by courseId + teacherId → one card per course-teacher combo
+    const groups = {};
+    for (const m of modules) {
+      const key = (m.courseId||'') + '::' + (m.teacherId||'');
+      if (!groups[key]) {
+        const course = allCourses.find(c=>c.id===m.courseId);
+        const teacher = allTeachers.find(t=>t.userId===m.teacherId);
+        groups[key] = {
+          courseId: m.courseId, teacherId: m.teacherId,
+          courseName: course?.name || m.courseName || m.courseId || 'Unknown Course',
+          teacherName: teacher?.name || m.teacherName || '—',
+          modules: []
+        };
+      }
+      groups[key].modules.push(m);
+    }
+
+    // Load lesson counts for each group
+    const allLessonsSnap = await getDocs(collection(db,'curriculumLessons'));
+    const allLessons = allLessonsSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+    const cards = Object.entries(groups).map(([key, g]) => {
+      const modIds = new Set(g.modules.map(m=>m.id));
+      const groupLessons = allLessons.filter(l=>modIds.has(l.moduleId) || l.courseId===g.courseId);
+      const totalL = groupLessons.length;
+      const doneL = groupLessons.filter(l=>l.status==='done').length;
+      const pct = totalL ? Math.round(doneL/totalL*100) : 0;
+      return {key, g, unitCount: g.modules.length, totalL, doneL, pct};
+    });
+
+    adminCurCache = groups;
+
+    grid.innerHTML = cards.map(({key, g, unitCount, totalL, doneL, pct}) => `
+      <div class="cur-progress-card" onclick="openAdminCurDetail('${encodeURIComponent(key)}')">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div class="flex-1 min-w-0">
+            <p class="text-white font-bold text-sm leading-snug truncate">${g.courseName}</p>
+            <p class="text-slate-500 text-xs mt-0.5">👨‍🏫 ${g.teacherName}</p>
+          </div>
+          <span class="text-emerald-400 font-bold text-lg flex-shrink-0">${pct}%</span>
         </div>
-        <span class="text-emerald-400 font-bold text-lg flex-shrink-0">${pct}%</span>
-      </div>
-      <div class="pbar-admin mb-2"><div class="pfill-admin" style="width:${pct}%"></div></div>
-      <div class="flex items-center justify-between text-xs mt-3">
-        <span class="text-slate-500">${unitCount} units · ${totalL} lessons</span>
-        <span class="text-emerald-400 font-semibold">${doneL} done</span>
-      </div>
-      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-emerald-400/10">
-        <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs flex-shrink-0" style="background:rgba(110,231,183,0.15)">T</div>
-        <span class="text-slate-500 text-xs truncate">${cur.teacherName||'—'}</span>
-        <span class="ml-auto text-sky-400 text-xs font-semibold">${cur.courseName||''}</span>
-      </div>
-    </div>`).join('');
+        <div class="pbar-admin mb-2"><div class="pfill-admin" style="width:${pct}%"></div></div>
+        <div class="flex items-center justify-between text-xs mt-3">
+          <span class="text-slate-500">${unitCount} modules · ${totalL} lessons</span>
+          <span class="text-emerald-400 font-semibold">${doneL} done</span>
+        </div>
+        <div class="flex items-center gap-2 mt-3 pt-3 border-t border-emerald-400/10">
+          <span class="badge ba text-xs">${unitCount} Modules</span>
+          <span class="badge bv2 text-xs">${totalL} Topics</span>
+          ${pct===100?'<span class="badge bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 text-xs">✓ Complete</span>':''}
+        </div>
+      </div>`).join('');
+
+  } catch(e) {
+    console.error('Admin curriculum error:', e);
+    grid.innerHTML = `<div class="gc p-8 text-center col-span-full text-red-400">Error loading: ${e.message}</div>`;
+  }
 };
 
-window.openAdminCurDetail = async (curId) => {
-  const cur = adminCurCache.find(c=>c.id===curId);
-  if (!cur) return;
-  adminCurSelected = cur;
+window.openAdminCurDetail = async (keyEncoded) => {
+  const key = decodeURIComponent(keyEncoded);
+  const g = adminCurCache[key];
+  if (!g) return;
+  adminCurSelected = g;
 
   document.getElementById('adCurGrid').style.display = 'none';
   document.getElementById('adCurDetail').style.display = 'block';
-  document.getElementById('adCurDetailTitle').textContent = cur.title||cur.courseName;
-  document.getElementById('adCurDetailMeta').textContent = [cur.teacherName, cur.courseName, cur.subject, cur.level, cur.totalDuration].filter(Boolean).join(' · ');
+  document.getElementById('adCurDetailTitle').textContent = g.courseName;
+  document.getElementById('adCurDetailMeta').textContent = `Teacher: ${g.teacherName} · Course: ${g.courseName}`;
 
-  // Load units + lessons
-  const uSnap = await getDocs(query(collection(db,'curriculumUnits'),where('curriculumId','==',curId)));
-  const units = uSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
-  let totalL=0, doneL=0;
   const unitsEl = document.getElementById('adCurUnitsEl');
-  unitsEl.innerHTML = '';
+  unitsEl.innerHTML = '<div class="text-slate-600 text-xs p-4">Loading modules...</div>';
 
-  for (const unit of units) {
-    const lSnap = await getDocs(query(collection(db,'curriculumLessons'),where('unitId','==',unit.id)));
-    const lessons = lSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
-    totalL += lessons.length;
-    doneL += lessons.filter(l=>l.status==='done').length;
-    unitsEl.appendChild(buildAdminUnitCard(unit, lessons));
+  try {
+    // Load modules sorted by order
+    const units = g.modules.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+
+    // Load all lessons for this course
+    const lSnap = await getDocs(query(collection(db,'curriculumLessons'), where('courseId','==',g.courseId)));
+    const allLessons = lSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+
+    // Load all sub-topics for this course
+    const stSnap = await getDocs(query(collection(db,'curriculumSubTopics'), where('courseId','==',g.courseId)));
+    const allSubTopics = stSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+
+    let totalL=0, doneL=0;
+    unitsEl.innerHTML = '';
+
+    for (const unit of units) {
+      const lessons = allLessons.filter(l=>l.moduleId===unit.id);
+      totalL += lessons.length;
+      doneL += lessons.filter(l=>l.status==='done').length;
+
+      // Build sub-topic map per lesson
+      const unitCard = buildAdminUnitCard(unit, lessons, allSubTopics);
+      unitsEl.appendChild(unitCard);
+    }
+
+    const pct = totalL ? Math.round(doneL/totalL*100) : 0;
+    document.getElementById('adCS1').textContent = units.length;
+    document.getElementById('adCS2').textContent = totalL;
+    document.getElementById('adCS3').textContent = doneL;
+    document.getElementById('adCS4').textContent = pct+'%';
+    document.getElementById('adCSProgBar').style.width = pct+'%';
+    document.getElementById('adCSProgLabel').textContent = `${doneL} / ${totalL} topics completed`;
+
+    if (!units.length) {
+      unitsEl.innerHTML = '<div class="gc p-6 text-center text-slate-600">No modules found for this course.</div>';
+    }
+  } catch(e) {
+    console.error(e);
+    unitsEl.innerHTML = `<div class="text-red-400 p-4">Error: ${e.message}</div>`;
   }
-
-  const pct = totalL ? Math.round(doneL/totalL*100) : 0;
-  document.getElementById('adCS1').textContent = units.length;
-  document.getElementById('adCS2').textContent = totalL;
-  document.getElementById('adCS3').textContent = doneL;
-  document.getElementById('adCS4').textContent = pct+'%';
-  document.getElementById('adCSProgBar').style.width = pct+'%';
-  document.getElementById('adCSProgLabel').textContent = `${doneL} / ${totalL} lessons completed`;
 };
 
-function buildAdminUnitCard(unit, lessons) {
+function buildAdminUnitCard(unit, lessons, allSubTopics) {
   const done = lessons.filter(l=>l.status==='done').length;
   const pct = lessons.length ? Math.round(done/lessons.length*100) : 0;
   const r=20, circ=2*Math.PI*r, offset=circ-(pct/100)*circ;
@@ -2540,30 +3571,32 @@ function buildAdminUnitCard(unit, lessons) {
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:#34d399">${pct}%</div>
       </div>
       <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2"><span class="text-slate-500 text-xs font-bold">Unit ${unit.order||''}</span>${unit.duration?`<span class="text-slate-600 text-xs">· ${unit.duration}</span>`:''}</div>
-        <p class="text-white font-bold text-sm mt-0.5 truncate">${unit.title}</p>
-        <p class="text-slate-500 text-xs">${lessons.length} lessons · ${done} done</p>
+        <div class="flex items-center gap-2"><span class="text-slate-500 text-xs font-bold">Module ${unit.order||''}</span>${unit.duration?`<span class="text-slate-600 text-xs">· ${unit.duration}</span>`:''}</div>
+        <p class="text-white font-bold text-sm mt-0.5 truncate">${unit.title||'Untitled Module'}</p>
+        <p class="text-slate-500 text-xs">${lessons.length} topics · ${done} done${unit.description?` · ${unit.description.slice(0,40)}`:''}</p>
       </div>
       <span class="arrow text-slate-500 transition-transform">▼</span>
     </div>
     <div class="hidden">
       ${lessons.length ? lessons.map(l=>{
         const dc={planned:'al-pl',ongoing:'al-on',done:'al-dn'}[l.status]||'al-pl';
+        const subTopics = allSubTopics.filter(st=>st.titleId===l.id);
         return `<div class="acur-lesson">
           <div class="al-dot ${dc}"></div>
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-1.5">
-              <span class="text-slate-500 text-xs">L${l.order||''}</span>
-              <span class="text-slate-200 text-xs font-semibold">${l.title}</span>
+              <span class="text-slate-500 text-xs">T${l.order||''}</span>
+              <span class="text-slate-200 text-xs font-semibold">${l.title||'Untitled'}</span>
               ${l.type?`<span class="text-xs px-1.5 rounded" style="background:rgba(56,189,248,0.1);color:#7dd3fc">${l.type}</span>`:''}
               ${l.duration?`<span class="text-slate-600 text-xs">⏱ ${l.duration}</span>`:''}
               ${l.scheduledDate?`<span class="text-slate-600 text-xs">📅 ${l.scheduledDate}</span>`:''}
             </div>
-            ${l.description?`<p class="text-slate-600 text-xs mt-0.5 truncate">${l.description}</p>`:''}
+            ${l.notes?`<p class="text-slate-600 text-xs mt-0.5 truncate">${l.notes}</p>`:''}
+            ${subTopics.length?`<div class="mt-1 pl-2 border-l border-slate-700 space-y-0.5">${subTopics.map(st=>`<p class="text-slate-600 text-xs">↳ ${st.title}</p>`).join('')}</div>`:''}
           </div>
           <span class="text-xs flex-shrink-0 px-2 py-0.5 rounded-full ${l.status==='done'?'text-emerald-400':l.status==='ongoing'?'text-yellow-400':'text-slate-500'}" style="background:rgba(255,255,255,0.04)">${l.status==='done'?'✓ Done':l.status==='ongoing'?'● Ongoing':'Planned'}</span>
         </div>`;
-      }).join('') : '<div class="p-4 text-center text-slate-600 text-xs">No lessons</div>'}
+      }).join('') : '<div class="p-4 text-center text-slate-600 text-xs">No topics in this module</div>'}
     </div>`;
   return div;
 }
@@ -2575,7 +3608,7 @@ window.closeAdminCurDetail = () => {
 
 window.exportAdminCurPDF = async () => {
   if (!adminCurSelected) return;
-  const cur = adminCurSelected;
+  const g = adminCurSelected;
   const {jsPDF} = window.jspdf;
   const pdf = new jsPDF();
   pdf.setFillColor(2,8,23); pdf.rect(0,0,210,297,'F');
@@ -2584,20 +3617,18 @@ window.exportAdminCurPDF = async () => {
   pdf.text('VIMS — Curriculum Report', 105, 14, {align:'center'});
   let y=30;
   pdf.setTextColor(226,232,240); pdf.setFontSize(11);
-  pdf.text(cur.title||cur.courseName, 14, y); y+=6;
+  pdf.text(g.courseName, 14, y); y+=6;
   pdf.setTextColor(100,116,139); pdf.setFontSize(8);
-  const meta=[cur.teacherName,cur.courseName,cur.subject,cur.level,cur.totalDuration].filter(Boolean).join(' · ');
-  pdf.text(meta, 14, y); y+=10;
-  const uSnap = await getDocs(query(collection(db,'curriculumUnits'),where('curriculumId','==',cur.id)));
-  const units = uSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+  pdf.text(`Teacher: ${g.teacherName}`, 14, y); y+=10;
+  const units = g.modules.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  const lSnap = await getDocs(query(collection(db,'curriculumLessons'), where('courseId','==',g.courseId)));
+  const allLessons = lSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
   for (const unit of units) {
     if (y>270){pdf.addPage();pdf.setFillColor(2,8,23);pdf.rect(0,0,210,297,'F');y=15;}
     pdf.setFillColor(8,25,50); pdf.rect(12,y-4,186,8,'F');
     pdf.setTextColor(52,211,153); pdf.setFontSize(9); pdf.setFont('helvetica','bold');
-    pdf.text(`Unit ${unit.order}: ${unit.title}`, 14, y+0.5);
-    y+=10;
-    const lSnap = await getDocs(query(collection(db,'curriculumLessons'),where('unitId','==',unit.id)));
-    const lessons = lSnap.docs.map(d=>d.data()).sort((a,b)=>(a.order||0)-(b.order||0));
+    pdf.text(`Module ${unit.order||''}: ${unit.title||''}`, 14, y+0.5); y+=10;
+    const lessons = allLessons.filter(l=>l.moduleId===unit.id);
     pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
     for (const l of lessons) {
       if (y>278){pdf.addPage();pdf.setFillColor(2,8,23);pdf.rect(0,0,210,297,'F');y=15;}
@@ -2606,16 +3637,17 @@ window.exportAdminCurPDF = async () => {
       pdf.setTextColor(r2,g2,b2);
       pdf.text(s==='done'?'✓':s==='ongoing'?'●':'○', 16, y);
       pdf.setTextColor(203,213,225);
-      pdf.text(`L${l.order||'-'}: ${l.title}`, 22, y);
+      pdf.text(`T${l.order||'-'}: ${l.title||''}`, 22, y);
       if (l.type){pdf.setTextColor(56,189,248);pdf.text(`[${l.type}]`,155,y);}
       if (l.duration){pdf.setTextColor(71,85,105);pdf.text(l.duration,195,y,{align:'right'});}
       y+=6.5;
     }
     y+=3;
   }
-  pdf.save(`curriculum_${cur.courseName||'report'}.pdf`);
+  pdf.save(`curriculum_${g.courseName.replace(/\s+/g,'_')}.pdf`);
   toast('PDF exported!','success');
 };
+
 
 // ── HOMEWORK MONITOR ─────────────────────────────────────────
 async function populateHwMonFilters() {
@@ -2712,8 +3744,11 @@ window.deleteHwAdmin = async (hwId) => {
 };
 
 // ── HELPERS ───────────────────────────────────────────────────
-window.showModal = (html) => {
-  document.getElementById('modalBox').innerHTML=html;
+window.showModal = (html, size) => {
+  const box = document.getElementById('modalBox');
+  box.innerHTML=html;
+  if(size==='large') box.style.maxWidth='680px';
+  else box.style.maxWidth='';
   document.getElementById('modalBg').classList.remove('hidden');
 };
 window.closeModal = (e) => {
@@ -2726,6 +3761,1298 @@ window.toast = (msg, type='info') => {
   el.textContent=msg;
   document.getElementById('toasts').appendChild(el);
   setTimeout(()=>el.remove(),3300);
+};
+
+// ══════════════════════════════════════════════════════════
+// MARKSHEET GENERATION  (Admin Panel)
+// ══════════════════════════════════════════════════════════
+
+window.generateMarksheet = async (studentId, courseId) => {
+  if(!courseId){ toast('Please select a course first','error'); return; }
+  toast('Generating marksheet...','info');
+  try {
+    // 1. Student profile
+    const uDoc = await getDoc(doc(db,'users',studentId));
+    const u = uDoc.exists() ? uDoc.data() : {name:studentId,userId:studentId};
+    // 2. Course info
+    const courseObj = allCourses.find(c=>c.id===courseId) || {};
+    // 3. All tests for this student + course
+    const tSnap = await getDocs(query(collection(db,'tests'),where('studentId','==',studentId),where('courseId','==',courseId)));
+    const tests = tSnap.docs.map(d=>d.data());
+    // 4. Online exam attempts
+    const aSnap = await getDocs(query(collection(db,'examAttempts'),where('studentId','==',studentId),where('courseId','==',courseId)));
+    const attempts = aSnap.docs.map(d=>d.data());
+    // 5. Attendance
+    const attSnap = await getDocs(query(collection(db,'attendance'),where('studentId','==',studentId),where('courseId','==',courseId)));
+    const atts = attSnap.docs.map(d=>d.data());
+    // 6. Rank among course students
+    const rankSnap = await getDocs(query(collection(db,'tests'),where('courseId','==',courseId)));
+    const allTests = rankSnap.docs.map(d=>d.data());
+    const sMap = {};
+    allTests.forEach(t=>{
+      if(!sMap[t.studentId]) sMap[t.studentId]={m:0,mx:0};
+      sMap[t.studentId].m+=t.marks||0; sMap[t.studentId].mx+=t.total||1;
+    });
+    const aRankSnap = await getDocs(query(collection(db,'examAttempts'),where('courseId','==',courseId)));
+    aRankSnap.docs.forEach(d=>{const a=d.data();if(!sMap[a.studentId])sMap[a.studentId]={m:0,mx:0};sMap[a.studentId].m+=a.score||0;sMap[a.studentId].mx+=a.total||1;});
+    const sorted = Object.keys(sMap).sort((a,b)=>(sMap[b].m/sMap[b].mx)-(sMap[a].m/sMap[a].mx));
+    const rank = sorted.indexOf(studentId)+1;
+    const totalStudents = sorted.length;
+
+    buildMarksheetPDF(u, courseObj, tests, attempts, atts, rank, totalStudents);
+  } catch(e) { console.error(e); toast('Error generating marksheet','error'); }
+};
+
+window.openBulkMarksheets = async () => {
+  const courseId = document.getElementById('rankCourse').value;
+  if(!courseId){ toast('Select a course first','error'); return; }
+  const rows = document.querySelectorAll('#rankBody tr');
+  if(!rows.length){ toast('No students to export','error'); return; }
+  const courseObj = allCourses.find(c=>c.id===courseId)||{};
+  showModal(`<h3 class="text-lg font-display font-bold text-white mb-2">Bulk Marksheets</h3>
+    <p class="text-slate-400 text-sm mb-4">Generate marksheets for all students in <span class="text-emerald-400 font-semibold">${courseObj.name||'selected course'}</span>?</p>
+    <div id="msProgress" class="mb-4 hidden">
+      <div class="w-full bg-slate-800 rounded-full h-2 mb-2"><div id="msPBar" class="bg-emerald-400 h-2 rounded-full transition-all" style="width:0%"></div></div>
+      <p id="msPText" class="text-slate-500 text-xs text-center">Processing...</p>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="startBulkMarksheets('${courseId}')" class="btn bp flex-1 justify-center" id="bulkStartBtn">🎓 Generate All PDFs</button>
+      <button onclick="closeModal()" class="btn bs flex-1 justify-center">Cancel</button>
+    </div>`);
+};
+
+window.startBulkMarksheets = async (courseId) => {
+  document.getElementById('bulkStartBtn').disabled = true;
+  document.getElementById('bulkStartBtn').textContent = 'Working...';
+  document.getElementById('msProgress').classList.remove('hidden');
+  const courseObj = allCourses.find(c=>c.id===courseId)||{};
+  const rows = [...document.querySelectorAll('#rankBody tr')].filter(r=>r.querySelectorAll('td').length>2);
+  for(let i=0;i<rows.length;i++){
+    const cells = rows[i].querySelectorAll('td');
+    const studentId = cells[2]?.textContent.trim();
+    if(!studentId) continue;
+    document.getElementById('msPBar').style.width = ((i+1)/rows.length*100)+'%';
+    document.getElementById('msPText').textContent = `Generating ${i+1}/${rows.length}: ${cells[1]?.textContent.trim()||studentId}`;
+    try {
+      const uDoc = await getDoc(doc(db,'users',studentId));
+      const u = uDoc.exists() ? uDoc.data() : {name:studentId,userId:studentId};
+      const tSnap = await getDocs(query(collection(db,'tests'),where('studentId','==',studentId),where('courseId','==',courseId)));
+      const tests = tSnap.docs.map(d=>d.data());
+      const aSnap = await getDocs(query(collection(db,'examAttempts'),where('studentId','==',studentId),where('courseId','==',courseId)));
+      const attempts = aSnap.docs.map(d=>d.data());
+      const attSnap = await getDocs(query(collection(db,'attendance'),where('studentId','==',studentId),where('courseId','==',courseId)));
+      const atts = attSnap.docs.map(d=>d.data());
+      buildMarksheetPDF(u, courseObj, tests, attempts, atts, i+1, rows.length, `marksheet_${u.name||studentId}.pdf`);
+      await new Promise(r=>setTimeout(r,400));
+    } catch(e){ console.warn('Skip',studentId,e); }
+  }
+  document.getElementById('msPText').textContent = `✅ Done! ${rows.length} marksheets generated.`;
+  document.getElementById('msPBar').style.width = '100%';
+};
+
+function buildMarksheetPDF(u, courseObj, tests, attempts, atts, rank, totalStudents, filename) {
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const W=210, H=297;
+
+  // ── Background ──
+  pdf.setFillColor(2,8,23); pdf.rect(0,0,W,H,'F');
+
+  // ── Header gradient bar ──
+  pdf.setFillColor(15,23,42); pdf.rect(0,0,W,42,'F');
+  pdf.setFillColor(110,231,183); pdf.rect(0,0,W,3,'F');
+
+  // ── Institute name ──
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.setTextColor(110,231,183);
+  pdf.text('VISION IT COMPUTER INSTITUTE',W/2,14,{align:'center'});
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(100,116,139);
+  pdf.text('Empowering Digital Skills | www.visionit.in',W/2,20,{align:'center'});
+
+  // ── MARKSHEET title ──
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(13); pdf.setTextColor(255,255,255);
+  pdf.text('STUDENT MARKSHEET',W/2,30,{align:'center'});
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(100,116,139);
+  const now=new Date(); pdf.text('Generated: '+now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),W/2,37,{align:'center'});
+
+  // ── Student Info Box ──
+  let y=50;
+  pdf.setFillColor(15,23,42); pdf.setDrawColor(110,231,183,0.3); pdf.setLineWidth(0.3);
+  pdf.roundedRect(10,y,W-20,32,2,2,'FD');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(9); pdf.setTextColor(110,231,183);
+  pdf.text('STUDENT INFORMATION',14,y+7);
+  pdf.setDrawColor(110,231,183); pdf.setLineWidth(0.3); pdf.line(14,y+9,80,y+9);
+
+  const infoY = y+16;
+  pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(100,116,139);
+  pdf.text('NAME',14,infoY); pdf.text('STUDENT ID',80,infoY); pdf.text('COURSE',130,infoY);
+  pdf.setFont('helvetica','normal'); pdf.setTextColor(226,232,240);
+  pdf.text((u.name||'-').substring(0,22),14,infoY+6);
+  pdf.text((u.userId||u.studentId||'-'),80,infoY+6);
+  pdf.text((courseObj.name||'-').substring(0,20),130,infoY+6);
+
+  const infoY2 = infoY+14;
+  pdf.setFont('helvetica','bold'); pdf.setTextColor(100,116,139);
+  pdf.text('GUARDIAN',14,infoY2); pdf.text('DOB',80,infoY2); pdf.text('SESSION',130,infoY2);
+  pdf.setFont('helvetica','normal'); pdf.setTextColor(226,232,240);
+  pdf.text((u.guardianName||u.fatherName||'-').substring(0,22),14,infoY2+6);
+  pdf.text(u.dob||'-',80,infoY2+6);
+  pdf.text(courseObj.duration||now.getFullYear().toString(),130,infoY2+6);
+
+  // ── Marks Table ──
+  y=92;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(9); pdf.setTextColor(110,231,183);
+  pdf.text('EXAMINATION RESULTS',14,y); y+=5;
+  pdf.setDrawColor(110,231,183); pdf.line(14,y,W-14,y); y+=4;
+
+  // Table header
+  pdf.setFillColor(15,23,42); pdf.rect(10,y,W-20,8,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(110,231,183);
+  pdf.text('EXAM TYPE',14,y+5.5);
+  pdf.text('SUBJECT / TITLE',54,y+5.5);
+  pdf.text('MARKS',120,y+5.5,{align:'right'});
+  pdf.text('MAX',138,y+5.5,{align:'right'});
+  pdf.text('%',154,y+5.5,{align:'right'});
+  pdf.text('GRADE',175,y+5.5,{align:'right'});
+  y+=10;
+
+  const getGrade = (pct) => pct>=90?'A+':pct>=80?'A':pct>=70?'B+':pct>=60?'B':pct>=50?'C':'F';
+  const gradeColor = (g) => g==='A+'||g==='A'?[110,231,183]:g==='B+'||g==='B'?[129,140,248]:g==='C'?[251,191,36]:[248,113,113];
+
+  // Prepare grouped rows
+  const dailyTests = tests.filter(t=>t.type==='daily');
+  const monthlyTests = tests.filter(t=>t.type==='monthly');
+  const finalTests = tests.filter(t=>t.type==='final');
+  const onlineExams = attempts;
+
+  const sections = [
+    {label:'Daily Tests', items: dailyTests.map(t=>({title:t.subject||t.title||'Daily Test',marks:t.marks||0,total:t.total||10}))},
+    {label:'Monthly Tests', items: monthlyTests.map(t=>({title:t.subject||t.title||'Monthly Test',marks:t.marks||0,total:t.total||50}))},
+    {label:'Final Exam', items: finalTests.map(t=>({title:t.subject||t.title||'Final Exam',marks:t.marks||0,total:t.total||100}))},
+    {label:'Online Exams', items: onlineExams.map(a=>({title:a.examTitle||'Online Exam',marks:a.score||0,total:a.total||10}))},
+  ].filter(s=>s.items.length>0);
+
+  let grandMarks=0, grandMax=0;
+  const allRows=[];
+
+  sections.forEach(sec=>{
+    allRows.push({isHeader:true, label:sec.label});
+    sec.items.forEach(item=>{ allRows.push({...item, type:sec.label}); grandMarks+=item.marks; grandMax+=item.total; });
+    // Subtotal
+    const sm=sec.items.reduce((s,i)=>s+i.marks,0);
+    const smx=sec.items.reduce((s,i)=>s+i.total,0);
+    const sp=smx?(sm/smx*100).toFixed(1):0;
+    allRows.push({isSubtotal:true, label:sec.label+' Average', marks:sm, total:smx, pct:sp});
+  });
+
+  allRows.forEach((row,idx)=>{
+    if(y>270){ pdf.addPage(); pdf.setFillColor(2,8,23); pdf.rect(0,0,W,H,'F'); y=20; }
+    if(row.isHeader){
+      pdf.setFillColor(20,30,50); pdf.rect(10,y-3,W-20,7,'F');
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(129,140,248);
+      pdf.text('▸ '+row.label,14,y+1); y+=6;
+    } else if(row.isSubtotal){
+      pdf.setFillColor(15,23,42); pdf.rect(10,y-3,W-20,7.5,'F');
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+      pdf.text('Subtotal',14,y+1);
+      pdf.text(row.marks.toString(),120,y+1,{align:'right'});
+      pdf.text(row.total.toString(),138,y+1,{align:'right'});
+      const g=getGrade(parseFloat(row.pct)); const [r2,g2,b2]=gradeColor(g);
+      pdf.setTextColor(r2,g2,b2); pdf.text(row.pct+'%',154,y+1,{align:'right'});
+      pdf.text(g,175,y+1,{align:'right'}); y+=8;
+    } else {
+      if(idx%2===0){ pdf.setFillColor(8,15,30); pdf.rect(10,y-3.5,W-20,7,'F'); }
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(7.5); pdf.setTextColor(226,232,240);
+      pdf.text(row.type.substring(0,14),14,y+0.5);
+      pdf.text((row.title||'-').substring(0,28),54,y+0.5);
+      pdf.text(row.marks.toString(),120,y+0.5,{align:'right'});
+      pdf.text(row.total.toString(),138,y+0.5,{align:'right'});
+      const pct2=row.total?(row.marks/row.total*100).toFixed(1):0;
+      const g2=getGrade(parseFloat(pct2)); const [r3,g3,b3]=gradeColor(g2);
+      pdf.setTextColor(r3,g3,b3);
+      pdf.text(pct2+'%',154,y+0.5,{align:'right'});
+      pdf.text(g2,175,y+0.5,{align:'right'});
+      y+=7;
+    }
+  });
+
+  // ── Grand Total Row ──
+  y+=2;
+  pdf.setFillColor(15,40,30); pdf.setDrawColor(110,231,183); pdf.setLineWidth(0.3);
+  pdf.roundedRect(10,y,W-20,11,1,1,'FD');
+  const grandPct=grandMax?(grandMarks/grandMax*100).toFixed(1):0;
+  const grandGrade=getGrade(parseFloat(grandPct));
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(9); pdf.setTextColor(110,231,183);
+  pdf.text('GRAND TOTAL',14,y+7);
+  pdf.setTextColor(226,232,240); pdf.text(grandMarks.toString(),120,y+7,{align:'right'});
+  pdf.text(grandMax.toString(),138,y+7,{align:'right'});
+  const [rg,gg,bg]=gradeColor(grandGrade);
+  pdf.setTextColor(rg,gg,bg); pdf.text(grandPct+'%',154,y+7,{align:'right'});
+  pdf.setFontSize(11); pdf.text(grandGrade,175,y+7,{align:'right'});
+  y+=18;
+
+  // ── Attendance + Rank Summary Cards ──
+  const present=atts.filter(a=>a.status==='present').length;
+  const attPct=atts.length?(present/atts.length*100).toFixed(1):0;
+  const attColor=parseFloat(attPct)>=75?[110,231,183]:[248,113,113];
+
+  // Card 1: Attendance
+  pdf.setFillColor(15,23,42); pdf.setDrawColor(50,60,90); pdf.setLineWidth(0.3);
+  pdf.roundedRect(10,y,58,24,2,2,'FD');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text('ATTENDANCE',15,y+7);
+  pdf.setFontSize(14); pdf.setTextColor(...attColor);
+  pdf.text(attPct+'%',39,y+17,{align:'center'});
+  pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text(`${present}/${atts.length} days`,39,y+22,{align:'center'});
+
+  // Card 2: Class Rank
+  pdf.setFillColor(15,23,42); pdf.roundedRect(72,y,58,24,2,2,'FD');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text('CLASS RANK',77,y+7);
+  pdf.setFontSize(14); pdf.setTextColor(129,140,248);
+  pdf.text(rank?'#'+rank:'-',101,y+17,{align:'center'});
+  pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text('out of '+(totalStudents||'-')+' students',101,y+22,{align:'center'});
+
+  // Card 3: Final Grade
+  pdf.setFillColor(15,23,42); pdf.roundedRect(134,y,66,24,2,2,'FD');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text('OVERALL GRADE',139,y+7);
+  pdf.setFontSize(18); pdf.setTextColor(rg,gg,bg);
+  pdf.text(grandGrade,167,y+18,{align:'center'});
+  pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text(grandPct+'% overall',167,y+23,{align:'center'});
+  y+=32;
+
+  // ── Grading Scale ──
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text('GRADING SCALE:',14,y+3);
+  const scale=[['A+','90-100%'],['A','80-89%'],['B+','70-79%'],['B','60-69%'],['C','50-59%'],['F','<50%']];
+  const scaleColors=[[110,231,183],[110,231,183],[129,140,248],[129,140,248],[251,191,36],[248,113,113]];
+  scale.forEach(([g,r],i)=>{
+    pdf.setTextColor(...scaleColors[i]); pdf.setFont('helvetica','bold');
+    pdf.text(g,55+i*25,y+3);
+    pdf.setTextColor(100,116,139); pdf.setFont('helvetica','normal');
+    pdf.text(r,55+i*25+5,y+3);
+  });
+  y+=10;
+
+  // ── Signature lines ──
+  if(y<260){
+    pdf.setDrawColor(50,60,90); pdf.setLineWidth(0.3);
+    pdf.line(14,H-30,60,H-30); pdf.line(80,H-30,126,H-30); pdf.line(148,H-30,196,H-30);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+    pdf.text('Student Signature',14,H-24); pdf.text('Teacher Signature',80,H-24); pdf.text('Principal Signature',148,H-24);
+  }
+
+  // ── Footer ──
+  pdf.setFillColor(15,23,42); pdf.rect(0,H-14,W,14,'F');
+  pdf.setDrawColor(110,231,183); pdf.setLineWidth(0.3); pdf.line(0,H-14,W,H-14);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5); pdf.setTextColor(100,116,139);
+  pdf.text('This is a computer-generated marksheet. | Vision IT Computer Institute | VIMS v2.0',W/2,H-7,{align:'center'});
+
+  pdf.save(filename || `Marksheet_${u.name||u.userId}_${courseObj.name||'Course'}.pdf`);
+  toast('Marksheet downloaded!','success');
+}
+
+// ══════════════════════════════════════════════════════════
+// ADMISSION QUERIES MANAGEMENT  (Admin Panel)
+// ══════════════════════════════════════════════════════════
+
+let allAdminQueries = [];
+
+window.initAdminAdmissions = async () => {
+  // Populate course filter
+  const cSel = document.getElementById('aqCourseFilter');
+  if(cSel.options.length<=1){
+    cSel.innerHTML = '<option value="">All Courses</option>' + allCourses.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  }
+  await loadAdminQueries();
+};
+
+// ── PIPELINE STAGES ────────────────────────────────────────────
+const PIPELINE_STAGES = [
+  { id:'enquiry',      label:'Enquiry / Lead',          icon:'📥', color:'#64748b' },
+  { id:'details',      label:'Details Collection',      icon:'📋', color:'#8b5cf6' },
+  { id:'counselling',  label:'Course Counselling',      icon:'🎓', color:'#6366f1' },
+  { id:'demo',         label:'Demo Class',               icon:'🖥️', color:'#0ea5e9' },
+  { id:'followup',     label:'Follow-up',                icon:'📞', color:'#f59e0b' },
+  { id:'confirmed',    label:'Admission Confirmed',      icon:'✅', color:'#10b981' },
+  { id:'formfilling',  label:'Form & Documents',         icon:'📄', color:'#14b8a6' },
+  { id:'fees',         label:'Fees & Receipt',           icon:'💳', color:'#f472b6' },
+  { id:'idcreation',   label:'Student ID Creation',      icon:'🪪', color:'#a78bfa' },
+  { id:'batch',        label:'Batch & Timetable',        icon:'📅', color:'#fb923c' },
+  { id:'onboarding',   label:'Onboarding',               icon:'🎉', color:'#22d3ee' },
+  { id:'tracking',     label:'Attendance & Performance', icon:'📊', color:'#4ade80' },
+  { id:'certificate',  label:'Certificate & Completion', icon:'🏆', color:'#fbbf24' },
+  { id:'referral',     label:'Referral & Review',        icon:'⭐', color:'#f87171' },
+];
+
+let currentAdmView = 'list';
+
+window.switchAdmView = (view) => {
+  currentAdmView = view;
+  document.getElementById('admViewList').classList.toggle('hidden', view!=='list');
+  document.getElementById('admViewPipeline').classList.toggle('hidden', view!=='pipeline');
+  document.getElementById('viewTabList').style.cssText = view==='list'?'background:rgba(16,185,129,0.15);color:#6ee7b7':'';
+  document.getElementById('viewTabPipeline').style.cssText = view==='pipeline'?'background:rgba(16,185,129,0.15);color:#6ee7b7':'';
+  if(view==='pipeline') renderPipelineBoard(allAdminQueries);
+};
+
+window.loadAdminQueries = async () => {
+  document.getElementById('aqBody').innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-600">Loading...</td></tr>';
+  try {
+    const snap = await getDocs(query(collection(db,'admissionQueries'), orderBy('createdAt','desc')));
+    allAdminQueries = snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Populate stage filter
+    const sf = document.getElementById('aqStageFilter');
+    if(sf && sf.options.length<=1) {
+      PIPELINE_STAGES.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.icon+' '+s.label; sf.appendChild(o); });
+    }
+    updateAdmissionStats();
+    updateAdmissionBadge();
+    renderAdminQueries(allAdminQueries);
+    if(currentAdmView==='pipeline') renderPipelineBoard(allAdminQueries);
+  } catch(e){ console.error(e); document.getElementById('aqBody').innerHTML = '<tr><td colspan="7" class="text-center py-8 text-red-400">Error loading</td></tr>'; }
+};
+
+function getStage(q) {
+  return q.pipelineStage || (q.status==='resolved'?'confirmed': q.status==='replied'?'counselling':'enquiry');
+}
+
+function updateAdmissionStats() {
+  const statsEl = document.getElementById('pipelineStats');
+  const counts = {};
+  PIPELINE_STAGES.forEach(s=>counts[s.id]=0);
+  allAdminQueries.forEach(q=>{ const st=getStage(q); if(counts[st]!==undefined) counts[st]++; });
+  statsEl.innerHTML = PIPELINE_STAGES.map(s=>`
+    <div class="gc p-3 text-center cursor-pointer hover:ring-1 transition-all" style="ring-color:${s.color}" onclick="filterByStage('${s.id}')">
+      <div class="text-lg mb-0.5">${s.icon}</div>
+      <div class="text-lg font-bold text-white">${counts[s.id]}</div>
+      <div class="text-slate-500" style="font-size:9px;line-height:1.2">${s.label}</div>
+    </div>`).join('');
+}
+
+window.filterByStage = (stageId) => {
+  switchAdmView('list');
+  const sf = document.getElementById('aqStageFilter');
+  if(sf) sf.value = stageId;
+  filterAdminQueries();
+};
+
+function updateAdmissionBadge() {
+  const pending = allAdminQueries.filter(q=>['enquiry','details','followup'].includes(getStage(q))).length;
+  const badge = document.getElementById('admissionsBadge');
+  if(pending>0){ badge.textContent=pending; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
+}
+
+window.filterAdminQueries = () => {
+  const q = (document.getElementById('aqSearch')?.value||'').toLowerCase();
+  const stage = document.getElementById('aqStageFilter')?.value||'';
+  const courseId = document.getElementById('aqCourseFilter')?.value||'';
+  let filtered = allAdminQueries;
+  if(stage) filtered = filtered.filter(x=>getStage(x)===stage);
+  if(courseId) filtered = filtered.filter(x=>x.courseId===courseId);
+  if(q) filtered = filtered.filter(x=>(x.studentName||'').toLowerCase().includes(q)||(x.phone||'').includes(q)||(x.courseName||'').toLowerCase().includes(q));
+  renderAdminQueries(filtered);
+};
+
+function stageInfo(q) {
+  const st = getStage(q);
+  return PIPELINE_STAGES.find(s=>s.id===st) || PIPELINE_STAGES[0];
+}
+
+function renderAdminQueries(queries) {
+  const tbody = document.getElementById('aqBody');
+  document.getElementById('aqCountLabel').textContent = queries.length + ' records';
+  if(!queries.length){ tbody.innerHTML='<tr><td colspan="7" class="text-center py-12 text-slate-600">No records found</td></tr>'; return; }
+  tbody.innerHTML = queries.map(q=>{
+    const date = q.createdAt?.toDate?.()?.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})||'-';
+    const si = stageInfo(q);
+    const nextA = q.nextAction || '-';
+    return `<tr>
+      <td>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="background:${si.color}22">${si.icon}</div>
+          <div><p class="text-white font-semibold text-xs">${q.studentName||'-'}</p><p class="text-slate-500 text-xs">${q.phone||''}</p></div>
+        </div>
+      </td>
+      <td class="mono text-xs text-emerald-400">${q.phone||'-'}</td>
+      <td class="text-slate-300 text-xs">${q.courseName||'<span class="text-slate-600">General</span>'}</td>
+      <td><span class="badge text-xs px-2 py-0.5 rounded-lg font-semibold" style="background:${si.color}22;color:${si.color}">${si.icon} ${si.label}</span></td>
+      <td class="text-slate-500 text-xs">${date}</td>
+      <td class="text-slate-400 text-xs max-w-xs">${(nextA).substring(0,30)}${nextA.length>30?'…':''}</td>
+      <td>
+        <div class="flex gap-1 flex-wrap">
+          <button onclick="openLeadDetail('${q.id}')" class="btn bp text-xs">📋 Open</button>
+          <button onclick="downloadAdmissionForm('${q.id}')" class="btn bs text-xs">📄</button>
+          <button onclick="deleteAdminQuery('${q.id}')" class="btn bd text-xs">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── PIPELINE BOARD ────────────────────────────────────────────
+function renderPipelineBoard(queries) {
+  const board = document.getElementById('pipelineBoard');
+  const byStage = {};
+  PIPELINE_STAGES.forEach(s=>byStage[s.id]=[]);
+  queries.forEach(q=>{ const st=getStage(q); if(byStage[st]) byStage[st].push(q); else byStage['enquiry'].push(q); });
+
+  board.innerHTML = PIPELINE_STAGES.map(s=>`
+    <div class="flex-shrink-0 rounded-2xl p-3" style="width:200px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-base">${s.icon}</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-white text-xs font-bold truncate">${s.label}</p>
+        </div>
+        <span class="text-xs font-bold px-1.5 py-0.5 rounded-full" style="background:${s.color}22;color:${s.color}">${byStage[s.id].length}</span>
+      </div>
+      <div class="space-y-2">
+        ${byStage[s.id].map(q=>`
+          <div onclick="openLeadDetail('${q.id}')" class="p-2.5 rounded-xl cursor-pointer hover:scale-[1.02] transition-transform" style="background:rgba(255,255,255,0.05);border:1px solid ${s.color}33">
+            <p class="text-white text-xs font-semibold truncate">${q.studentName||'Unknown'}</p>
+            <p class="text-slate-500 text-xs">${q.phone||''}</p>
+            <p class="text-xs mt-1 truncate" style="color:${s.color}cc">${q.courseName||'General'}</p>
+            ${q.nextAction?`<p class="text-slate-600 text-xs mt-1 truncate">→ ${q.nextAction}</p>`:''}
+            <p class="text-slate-700 text-xs mt-1">${q.createdAt?.toDate?.()?.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})||''}</p>
+          </div>`).join('')}
+        ${byStage[s.id].length===0?`<div class="text-center py-4 text-slate-700 text-xs">No leads</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ── LEAD DETAIL MODAL ─────────────────────────────────────────
+window.openLeadDetail = (queryId) => {
+  const q = allAdminQueries.find(x=>x.id===queryId);
+  if(!q) return;
+  const si = stageInfo(q);
+  const date = q.createdAt?.toDate?.()?.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})||'-';
+  const stageOpts = PIPELINE_STAGES.map(s=>`<option value="${s.id}" ${getStage(q)===s.id?'selected':''}>${s.icon} ${s.label}</option>`).join('');
+
+  // Build timeline HTML
+  const history = Array.isArray(q.stageHistory) ? q.stageHistory : [];
+  const timelineHtml = history.length ? history.slice().reverse().map(h=>{
+    const hsi = PIPELINE_STAGES.find(s=>s.id===h.stage)||PIPELINE_STAGES[0];
+    return `<div class="flex items-start gap-2">
+      <span class="text-sm flex-shrink-0 mt-0.5">${hsi.icon}</span>
+      <div>
+        <p class="text-white text-xs font-semibold">${hsi.label}</p>
+        <p class="text-slate-600 text-xs">${h.note||''} · ${h.date||''}</p>
+      </div>
+    </div>`;
+  }).join('') : '<p class="text-slate-600 text-xs">No history yet</p>';
+
+  showModal(`
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style="background:${si.color}22">${si.icon}</div>
+      <div class="flex-1 min-w-0">
+        <h3 class="text-base font-bold text-white truncate">${q.studentName||'Lead'}</h3>
+        <p class="text-slate-500 text-xs">${q.phone||''} ${q.email?'· '+q.email:''}</p>
+      </div>
+      <button onclick="downloadAdmissionForm('${queryId}')" class="btn bs text-xs flex-shrink-0">📄 Form</button>
+    </div>
+
+    <!-- Info grid -->
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <div class="gc p-2.5"><p class="text-slate-500 text-xs">Course</p><p class="text-white text-xs font-semibold mt-0.5">${q.courseName||'General'}</p></div>
+      <div class="gc p-2.5"><p class="text-slate-500 text-xs">Source</p><p class="text-white text-xs font-semibold mt-0.5">${q.source||'-'}</p></div>
+      <div class="gc p-2.5"><p class="text-slate-500 text-xs">Qualification</p><p class="text-white text-xs font-semibold mt-0.5">${q.qualification||'-'}</p></div>
+      <div class="gc p-2.5"><p class="text-slate-500 text-xs">Date</p><p class="text-white text-xs font-semibold mt-0.5">${date}</p></div>
+    </div>
+
+    ${q.message?`<div class="gc p-3 mb-4"><p class="text-slate-500 text-xs mb-1">Enquiry Message</p><p class="text-slate-200 text-xs">${q.message}</p></div>`:''}
+
+    <!-- Stage update -->
+    <div class="space-y-3 mb-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Move to Stage</label>
+          <select id="ldStage" class="inp">${stageOpts}</select>
+        </div>
+        <div><label class="lbl">Next Action</label>
+          <input id="ldNextAction" class="inp" value="${q.nextAction||''}" placeholder="e.g. Call tomorrow"/>
+        </div>
+      </div>
+      <div><label class="lbl">Note / Remark</label>
+        <textarea id="ldNote" class="inp" rows="2" placeholder="Add a note for this stage update..."></textarea>
+      </div>
+    </div>
+
+    <!-- Admin reply -->
+    <div class="mb-4">
+      <label class="lbl">Admin Reply (visible to student)</label>
+      <textarea id="adminReplyText" class="inp" rows="2" placeholder="Write reply...">${q.adminReply||''}</textarea>
+    </div>
+
+    <!-- Timeline -->
+    <div class="mb-4">
+      <p class="lbl mb-2">Stage History</p>
+      <div class="space-y-2 max-h-32 overflow-y-auto pr-1">${timelineHtml}</div>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="saveLeadUpdate('${queryId}')" class="btn ba flex-1 justify-center">💾 Save Update</button>
+      ${q.studentId?`<button onclick="closeModal();adminEnrollStudent('${q.studentId}','${(q.studentName||'').replace(/'/g,'')}')"; class="btn bp flex-1 justify-center">📚 Enroll</button>`:''}
+      <button onclick="closeModal()" class="btn bs justify-center">✕</button>
+    </div>`, 'large');
+};
+
+window.saveLeadUpdate = async (queryId) => {
+  const stage = document.getElementById('ldStage').value;
+  const nextAction = document.getElementById('ldNextAction').value.trim();
+  const note = document.getElementById('ldNote').value.trim();
+  const adminReply = document.getElementById('adminReplyText').value.trim();
+  const q = allAdminQueries.find(x=>x.id===queryId);
+  if(!q) return;
+
+  const si = PIPELINE_STAGES.find(s=>s.id===stage);
+  const history = Array.isArray(q.stageHistory) ? [...q.stageHistory] : [];
+  if(note || stage !== getStage(q)) {
+    history.push({ stage, note, date: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), by:'admin' });
+  }
+
+  // Map stage to legacy status
+  const statusMap = { enquiry:'pending', details:'pending', counselling:'replied', demo:'replied', followup:'replied', confirmed:'resolved', formfilling:'resolved', fees:'resolved', idcreation:'resolved', batch:'resolved', onboarding:'resolved', tracking:'resolved', certificate:'resolved', referral:'resolved' };
+
+  await updateDoc(doc(db,'admissionQueries',queryId),{
+    pipelineStage: stage,
+    status: statusMap[stage]||'pending',
+    nextAction, adminReply, stageHistory: history,
+    updatedAt: serverTimestamp()
+  });
+  closeModal();
+  toast(`✅ Lead moved to: ${si?.label||stage}`,'success');
+  await loadAdminQueries();
+};
+
+// ── ADD LEAD MANUALLY ────────────────────────────────────────
+window.openAddLead = async () => {
+  const cSnap = await getDocs(collection(db,'courses'));
+  const courses = cSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const cOpts = courses.map(c=>`<option value="${c.id}" data-name="${c.name.replace(/"/g,'')}">${c.name}</option>`).join('');
+  showModal(`
+    <h3 class="text-base font-bold text-white mb-4">➕ Add New Lead / Enquiry</h3>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Full Name *</label><input id="nlName" class="inp" placeholder="Student name"/></div>
+        <div><label class="lbl">Phone *</label><input id="nlPhone" class="inp" type="tel" placeholder="Mobile no."/></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Email</label><input id="nlEmail" class="inp" type="email" placeholder="email@..."/></div>
+        <div><label class="lbl">Qualification</label>
+          <select id="nlQual" class="inp"><option value="">Select</option><option>10th Pass</option><option>12th Pass</option><option>Graduate</option><option>Post Graduate</option><option>Other</option></select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Interested Course</label>
+          <select id="nlCourse" class="inp"><option value="">-- Select --</option>${cOpts}</select>
+        </div>
+        <div><label class="lbl">Source</label>
+          <select id="nlSource" class="inp"><option value="">Select</option><option>Google Search</option><option>Social Media</option><option>Friend / Referral</option><option>Banner / Poster</option><option>Walk-in</option><option>Other</option></select>
+        </div>
+      </div>
+      <div><label class="lbl">Initial Stage</label>
+        <select id="nlStage" class="inp">${PIPELINE_STAGES.map(s=>`<option value="${s.id}">${s.icon} ${s.label}</option>`).join('')}</select>
+      </div>
+      <div><label class="lbl">Message / Note</label>
+        <textarea id="nlMsg" class="inp" rows="2" placeholder="Any note or initial query..."></textarea>
+      </div>
+      <div><label class="lbl">Next Action</label>
+        <input id="nlNext" class="inp" placeholder="e.g. Call back at 5 PM"/></div>
+      <button onclick="saveNewLead()" class="btn ba w-full justify-center">➕ Add Lead</button>
+    </div>`);
+};
+
+window.saveNewLead = async () => {
+  const name = document.getElementById('nlName').value.trim();
+  const phone = document.getElementById('nlPhone').value.trim();
+  if(!name||!phone){ toast('Name and phone required','error'); return; }
+  const sel = document.getElementById('nlCourse');
+  const courseId = sel.value;
+  const courseName = courseId ? sel.options[sel.selectedIndex]?.dataset.name||sel.options[sel.selectedIndex]?.text||'' : '';
+  const stage = document.getElementById('nlStage').value;
+  const statusMap = { enquiry:'pending', details:'pending', counselling:'replied', demo:'replied', followup:'replied', confirmed:'resolved' };
+  await addDoc(collection(db,'admissionQueries'),{
+    studentName:name, phone, email:document.getElementById('nlEmail').value.trim(),
+    qualification:document.getElementById('nlQual').value,
+    courseId, courseName,
+    source:document.getElementById('nlSource').value,
+    message:document.getElementById('nlMsg').value.trim(),
+    nextAction:document.getElementById('nlNext').value.trim(),
+    pipelineStage:stage, status:statusMap[stage]||'pending',
+    stageHistory:[{stage, note:'Lead added manually', date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), by:'admin'}],
+    adminReply:'', createdAt:serverTimestamp(), updatedAt:serverTimestamp()
+  });
+  closeModal();
+  toast('Lead added!','success');
+  await loadAdminQueries();
+};
+
+window.openQueryReply = (queryId) => openLeadDetail(queryId);
+
+window.deleteAdminQuery = async (queryId) => {
+  if(!confirm('Delete this lead/query?')) return;
+  try {
+    await deleteDoc(doc(db,'admissionQueries',queryId));
+    toast('Deleted','success');
+    await loadAdminQueries();
+  } catch(e){ toast('Error deleting','error'); }
+};
+
+window.exportQueriesPDF = () => {
+  if(!allAdminQueries.length){ toast('No data to export','error'); return; }
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF();
+  const W=210,H=297;
+  pdf.setFillColor(2,8,23); pdf.rect(0,0,W,H,'F');
+  pdf.setFillColor(15,23,42); pdf.rect(0,0,W,18,'F');
+  pdf.setFillColor(16,185,129); pdf.rect(0,0,W,2.5,'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(16,185,129);
+  pdf.text('VIMS – Admission Pipeline Report',W/2,12,{align:'center'});
+  let y=26;
+  pdf.setFontSize(7.5); pdf.setFont('helvetica','bold'); pdf.setTextColor(16,185,129);
+  pdf.text('NAME',12,y); pdf.text('PHONE',55,y); pdf.text('COURSE',88,y); pdf.text('STAGE',148,y); pdf.text('DATE',182,y);
+  y+=4; pdf.setDrawColor(16,185,129); pdf.line(12,y,198,y); y+=5;
+  allAdminQueries.forEach((q,i)=>{
+    if(y>280){pdf.addPage();pdf.setFillColor(2,8,23);pdf.rect(0,0,W,H,'F');y=20;}
+    if(i%2===0){pdf.setFillColor(10,18,35);pdf.rect(10,y-4,188,8,'F');}
+    const si = stageInfo(q);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(7.5); pdf.setTextColor(226,232,240);
+    pdf.text((q.studentName||'-').substring(0,18),12,y);
+    pdf.setTextColor(16,185,129); pdf.text(q.phone||'-',55,y);
+    pdf.setTextColor(226,232,240); pdf.text((q.courseName||'General').substring(0,24),88,y);
+    pdf.setTextColor(200,200,200); pdf.text((si.label).substring(0,20),148,y);
+    pdf.setTextColor(100,116,139);
+    const d=q.createdAt?.toDate?.()?.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})||'-';
+    pdf.text(d,182,y); y+=9;
+  });
+  pdf.save('admission_pipeline.pdf');
+  toast('PDF exported!','success');
+};
+
+// ── ADMISSION FORM PDF ─────────────────────────────────────────
+function buildAdmissionFormPDF(pdf, q, formNo) {
+  const W = 210, H = 297;
+  const today = new Date();
+
+  // Background
+  pdf.setFillColor(255,255,255);
+  pdf.rect(0,0,W,H,'F');
+
+  // ── HEADER ──────────────────────────────────────────────────
+  // Top green bar
+  pdf.setFillColor(16,185,129);
+  pdf.rect(0,0,W,1.5,'F');
+
+  // Institute logo area
+  pdf.setFillColor(240,253,244);
+  pdf.rect(0,0,W,38,'F');
+
+  // Logo circle
+  pdf.setFillColor(16,185,129);
+  pdf.circle(20,19,10,'F');
+  pdf.setTextColor(255,255,255);
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(9);
+  pdf.text('VIMS',20,22,{align:'center'});
+
+  // Institute name
+  pdf.setTextColor(15,118,110);
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(16);
+  pdf.text('Vision IT Computer Institute',105,13,{align:'center'});
+
+  pdf.setFont('helvetica','normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(52,78,65);
+  pdf.text('Pratappur, Surajpur, Chhattisgarh  |  www.visionit.edu.in  |  📞 +91-XXXXXXXXXX',105,20,{align:'center'});
+
+  // Form title bar
+  pdf.setFillColor(16,185,129);
+  pdf.rect(0,30,W,10,'F');
+  pdf.setTextColor(255,255,255);
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(11);
+  pdf.text('ADMISSION ENQUIRY FORM', W/2, 36.5, {align:'center'});
+
+  // Form number & date row
+  pdf.setFillColor(236,253,245);
+  pdf.rect(0,40,W,8,'F');
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(52,78,65);
+  pdf.text(`Form No: ${formNo||'AEF-'+String(Math.floor(Math.random()*9000)+1000)}`, 14, 45);
+  const submittedDate = q.createdAt?.toDate?.()?.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) || today.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  pdf.text(`Date: ${submittedDate}`, W-14, 45, {align:'right'});
+
+  // ── PHOTO BOX ───────────────────────────────────────────────
+  pdf.setDrawColor(180,180,180);
+  pdf.setLineWidth(0.5);
+  pdf.rect(W-38,43,26,32);
+  pdf.setTextColor(180,180,180);
+  pdf.setFontSize(6.5);
+  pdf.text('Passport',W-25,55,{align:'center'});
+  pdf.text('Size',W-25,59,{align:'center'});
+  pdf.text('Photo',W-25,63,{align:'center'});
+
+  // ── SECTIONS ────────────────────────────────────────────────
+  let y = 55;
+
+  function sectionHeader(title) {
+    pdf.setFillColor(232,248,244);
+    pdf.rect(12,y-4,W-24,7,'F');
+    pdf.setDrawColor(16,185,129);
+    pdf.setLineWidth(0.5);
+    pdf.line(12,y-4,14,y-4); // left accent line
+    pdf.setFillColor(16,185,129);
+    pdf.rect(12,y-4,2,7,'F');
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(8.5); pdf.setTextColor(15,118,110);
+    pdf.text(title, 17, y+0.5);
+    y += 10;
+  }
+
+  function fieldRow(label, value, full=false) {
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(100,116,139);
+    pdf.text(label+':', 14, y);
+    pdf.setDrawColor(200,200,200); pdf.setLineWidth(0.3);
+    if(full) {
+      pdf.line(14, y+2, W-14, y+2);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(30,41,59);
+      const words = pdf.splitTextToSize(value||'', W-30);
+      pdf.text(words[0]||'', 16, y+1);
+    } else {
+      pdf.line(50, y+2, W/2-5, y+2);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(30,41,59);
+      pdf.text((value||'').substring(0,28), 52, y+1);
+    }
+    y += 9;
+  }
+
+  function fieldRowDouble(label1, val1, label2, val2) {
+    const cx = W/2+2;
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(100,116,139);
+    pdf.text(label1+':', 14, y);
+    pdf.setDrawColor(200,200,200); pdf.setLineWidth(0.3);
+    pdf.line(50, y+2, cx-5, y+2);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(30,41,59);
+    pdf.text((val1||'').substring(0,22), 52, y+1);
+
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(100,116,139);
+    pdf.text(label2+':', cx, y);
+    pdf.line(cx+36, y+2, W-14, y+2);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(30,41,59);
+    pdf.text((val2||'').substring(0,22), cx+38, y+1);
+    y += 9;
+  }
+
+  function checkRow(label, options, selectedValue) {
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(100,116,139);
+    pdf.text(label+':', 14, y);
+    let cx = 52;
+    options.forEach(opt => {
+      const checked = opt.toLowerCase() === (selectedValue||'').toLowerCase();
+      pdf.setDrawColor(checked?'#10b981':150,150,150);
+      pdf.setLineWidth(0.4);
+      pdf.rect(cx, y-3, 3.5, 3.5);
+      if(checked){ pdf.setFillColor(16,185,129); pdf.rect(cx+0.5,y-2.5,2.5,2.5,'F'); }
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(7.5); pdf.setTextColor(30,41,59);
+      pdf.text(opt, cx+5, y);
+      cx += 5 + pdf.getTextWidth(opt) + 8;
+    });
+    y += 9;
+  }
+
+  // ── SECTION 1: Personal Info ─────────────────────────────
+  sectionHeader('1. PERSONAL INFORMATION');
+  fieldRowDouble('Full Name', q.studentName, 'Mobile No.', q.phone);
+  fieldRowDouble('Email Address', q.email||'', 'Alt. Phone', '');
+  fieldRowDouble('Date of Birth', q.dob||'', 'Gender', q.gender||'');
+  fieldRow('Address', q.address||'', true);
+  fieldRowDouble('City', q.city||'', 'State', q.state||'Chhattisgarh');
+  fieldRowDouble('Pin Code', q.pinCode||'', 'Nationality', 'Indian');
+
+  y += 3;
+  // ── SECTION 2: Academic Info ──────────────────────────────
+  sectionHeader('2. ACADEMIC INFORMATION');
+  fieldRow('Last Qualification', q.qualification||'', false);
+  fieldRowDouble('Board / University', q.board||'', 'Year of Passing', q.passYear||'');
+  fieldRowDouble('Percentage / Grade', q.percentage||'', 'Stream', q.stream||'');
+
+  y += 3;
+  // ── SECTION 3: Course Info ────────────────────────────────
+  sectionHeader('3. COURSE DETAILS');
+  fieldRow('Course Applied For', q.courseName||'', false);
+  checkRow('Preferred Batch', ['Morning','Afternoon','Evening'], q.preferredBatch||'');
+  fieldRow('How did you hear?', q.source||'', false);
+
+  y += 3;
+  // ── SECTION 4: Query / Message ────────────────────────────
+  sectionHeader('4. ENQUIRY / MESSAGE');
+  const msgLines = pdf.splitTextToSize(q.message||'', W-30);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(30,41,59);
+  pdf.text(msgLines.slice(0,4), 14, y);
+  // Lines for message box
+  for(let i=0;i<4;i++){
+    pdf.setDrawColor(220,220,220); pdf.setLineWidth(0.2);
+    pdf.line(14, y+(i*7)+3, W-14, y+(i*7)+3);
+  }
+  y += 35;
+
+  // ── SECTION 5: Status (admin filled) ─────────────────────
+  if(q.adminReply) {
+    sectionHeader('5. INSTITUTE RESPONSE');
+    const replyLines = pdf.splitTextToSize(q.adminReply, W-30);
+    pdf.setFont('helvetica','italic'); pdf.setFontSize(8); pdf.setTextColor(15,118,110);
+    pdf.text(replyLines.slice(0,3), 14, y);
+    y += replyLines.slice(0,3).length * 7 + 5;
+  }
+
+  // ── STATUS BADGE ─────────────────────────────────────────
+  const statusColors = {pending:[251,191,36], replied:[99,102,241], resolved:[16,185,129], '':  [156,163,175]};
+  const sc = statusColors[q.status||''] || [156,163,175];
+  pdf.setFillColor(...sc);
+  pdf.roundedRect(14, y, 40, 8, 2, 2, 'F');
+  pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5);
+  const statusText = {pending:'⏳ PENDING', replied:'💬 REPLIED', resolved:'✅ RESOLVED'}[q.status||''] || 'PENDING';
+  pdf.text(statusText.replace(/[⏳💬✅]/g,'').trim(), 34, y+5, {align:'center'});
+
+  y = Math.max(y+18, H-48);
+
+  // ── DECLARATION ───────────────────────────────────────────
+  pdf.setFillColor(248,250,248);
+  pdf.rect(12, y-4, W-24, 20,'F');
+  pdf.setFont('helvetica','italic'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  const decl = 'I hereby declare that the information provided above is true and correct to the best of my knowledge. I agree to abide by the rules and regulations of Vision IT Computer Institute.';
+  const declLines = pdf.splitTextToSize(decl, W-32);
+  pdf.text(declLines, 16, y+2);
+  y += 18;
+
+  // Signature lines
+  pdf.setDrawColor(100,116,139); pdf.setLineWidth(0.4);
+  pdf.line(14, y+14, 70, y+14);
+  pdf.line(W-70, y+14, W-14, y+14);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(100,116,139);
+  pdf.text("Applicant's Signature", 14, y+18);
+  pdf.text("Authorized Signature & Stamp", W-14, y+18, {align:'right'});
+
+  // ── FOOTER ────────────────────────────────────────────────
+  pdf.setFillColor(16,185,129);
+  pdf.rect(0,H-8,W,8,'F');
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(255,255,255);
+  pdf.text('Vision IT Computer Institute · Pratappur, Surajpur, Chhattisgarh · This form is computer generated', W/2, H-3.5, {align:'center'});
+}
+
+window.downloadAdmissionForm = (queryId) => {
+  const q = allAdminQueries.find(x=>x.id===queryId);
+  if(!q){ toast('Query not found','error'); return; }
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const formNo = 'VIMS/AEF/' + new Date().getFullYear() + '/' + (queryId||'').substring(0,6).toUpperCase();
+  buildAdmissionFormPDF(pdf, q, formNo);
+  const safeName = (q.studentName||'student').replace(/[^a-zA-Z0-9]/g,'_');
+  pdf.save(`Admission_Form_${safeName}.pdf`);
+  toast('Admission form downloaded!','success');
+};
+
+window.downloadBlankAdmissionForm = () => {
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  // Blank form — pass empty query object
+  buildAdmissionFormPDF(pdf, {}, 'VIMS/AEF/____/____');
+  pdf.save('VIMS_Blank_Admission_Form.pdf');
+  toast('Blank admission form downloaded!','success');
+};
+
+window.bulkDownloadAdmissionForms = async () => {
+  if(!allAdminQueries.length){ toast('No queries to export','error'); return; }
+  toast('Generating bulk forms...','info');
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  allAdminQueries.forEach((q,i) => {
+    if(i>0) pdf.addPage();
+    const formNo = 'VIMS/AEF/'+new Date().getFullYear()+'/'+String(i+1).padStart(3,'0');
+    buildAdmissionFormPDF(pdf, q, formNo);
+  });
+  pdf.save(`VIMS_All_Admission_Forms_${new Date().toLocaleDateString('en-IN').replace(/\//g,'-')}.pdf`);
+  toast(`${allAdminQueries.length} forms downloaded!`,'success');
+};
+
+// Load pending queries badge on app init
+async function loadAdmissionsBadgeCount() {
+  try {
+    const snap = await getDocs(query(collection(db,'admissionQueries'),where('status','==','pending')));
+    const count = snap.size;
+    const badge = document.getElementById('admissionsBadge');
+    if(count>0){ badge.textContent=count; badge.classList.remove('hidden'); }
+  } catch(e){}
+}
+
+// ── ADMIN ENROLL STUDENT IN COURSE ────────────────────────────
+window.adminEnrollStudent = async (studentId, studentName) => {
+  // Get current enrollments for this student
+  const enSnap = await getDocs(query(collection(db,'enrollments'),where('studentId','==',studentId)));
+  const enrolled = new Set(enSnap.docs.map(d=>d.data().courseId));
+  const courseOpts = allCourses.map(c=>`<option value="${c.id}" data-name="${c.name}" data-teacher="${c.teacherId||''}" data-tname="${c.teacherName||''}" ${enrolled.has(c.id)?'disabled':''}>${c.name}${enrolled.has(c.id)?' (Already Enrolled)':''}</option>`).join('');
+  showModal(`
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(110,231,183,0.1);border:1px solid rgba(110,231,183,0.2)"><span class="text-xl">📚</span></div>
+      <div><h3 class="text-base font-display font-bold text-white">Enroll Student</h3><p class="text-slate-500 text-xs">${studentName} · ${studentId}</p></div>
+    </div>
+    ${enSnap.size>0?`<div class="mb-3"><p class="text-slate-500 text-xs mb-2">Currently enrolled in:</p><div class="flex flex-wrap gap-1">${enSnap.docs.map(d=>`<span class="badge ba text-xs">${d.data().courseName}</span>`).join('')}</div></div>`:''}
+    <div class="space-y-3">
+      <div><label class="lbl">Select Course to Enroll *</label>
+        <select id="enrCourse" class="inp"><option value="">-- Select Course --</option>${courseOpts}</select></div>
+      <div id="enrCourseInfo" class="hidden gc p-3 text-xs space-y-1"></div>
+      <div class="flex gap-3">
+        <button onclick="confirmAdminEnroll('${studentId}','${studentName}')" class="btn bp flex-1 justify-center">✅ Enroll Now</button>
+        <button onclick="closeModal()" class="btn bs flex-1 justify-center">Cancel</button>
+      </div>
+      ${enSnap.size>0?`<div class="border-t border-slate-700 pt-3"><p class="text-slate-500 text-xs mb-2">Remove from a course:</p><div class="flex flex-wrap gap-1">${enSnap.docs.map(d=>`<button onclick="removeStudentEnrollment('${d.id}','${studentId}','${studentName}')" class="btn bd text-xs">✕ ${d.data().courseName}</button>`).join('')}</div></div>`:''}
+    </div>`);
+  document.getElementById('enrCourse').addEventListener('change',function(){
+    const opt = this.options[this.selectedIndex];
+    const inf = document.getElementById('enrCourseInfo');
+    if(this.value){ inf.classList.remove('hidden'); inf.innerHTML=`<p class="text-slate-400">Teacher: <span class="text-emerald-400">${opt.dataset.tname||'—'}</span></p>`; }
+    else inf.classList.add('hidden');
+  });
+};
+
+window.confirmAdminEnroll = async (studentId, studentName) => {
+  const sel = document.getElementById('enrCourse');
+  const courseId = sel.value;
+  if(!courseId){ toast('Select a course','error'); return; }
+  const opt = sel.options[sel.selectedIndex];
+  const courseName = opt.dataset.name || opt.text;
+  const teacherId = opt.dataset.teacher||'';
+  const teacherName = opt.dataset.tname||'';
+  try {
+    // Check duplicate
+    const ex = await getDocs(query(collection(db,'enrollments'),where('studentId','==',studentId),where('courseId','==',courseId)));
+    if(!ex.empty){ toast('Student already enrolled in this course','error'); return; }
+    await addDoc(collection(db,'enrollments'),{studentId,studentName,courseId,courseName,teacherId,teacherName,enrolledAt:serverTimestamp(),enrolledBy:'admin'});
+    // Update user's courseAssigned field
+    await updateDoc(doc(db,'users',studentId),{courseAssigned:courseName,updatedAt:serverTimestamp()});
+    closeModal();
+    toast(`${studentName} enrolled in ${courseName}!`,'success');
+    loadStudents();
+  } catch(e){ console.error(e); toast('Error enrolling student','error'); }
+};
+
+window.removeStudentEnrollment = async (enrollmentId, studentId, studentName) => {
+  if(!confirm(`Remove enrollment? This will unenroll ${studentName} from this course.`)) return;
+  try {
+    await deleteDoc(doc(db,'enrollments',enrollmentId));
+    toast('Enrollment removed','success');
+    closeModal();
+    loadStudents();
+    // Re-open the enroll modal refreshed
+    setTimeout(()=>adminEnrollStudent(studentId,studentName),400);
+  } catch(e){ toast('Error removing enrollment','error'); }
+};
+
+// ── FREE COURSE SELF-ENROLL VISIBILITY ────────────────────────
+window.updateFreeEnrollVisibility = () => {
+  const fees = parseFloat(document.getElementById('cFees')?.value)||0;
+  const box = document.getElementById('freeEnrollBox');
+  if(box){ if(fees===0) box.classList.remove('hidden'); else box.classList.add('hidden'); }
+};
+
+window.updateDiscountPreviewLive = () => {
+  const fees = parseFloat(document.getElementById('cFees')?.value)||0;
+  const discType = document.getElementById('cDiscountType')?.value||'amount';
+  const discVal = parseFloat(document.getElementById('cDiscount')?.value)||0;
+  const discAmt = discType==='percent' ? Math.round(fees*(discVal/100)) : discVal;
+  const netFee = Math.max(0, fees - discAmt);
+  
+  const discPrev = document.getElementById('discountPreview');
+  const netDisp = document.getElementById('netFeeDisplay');
+  
+  if(discPrev) {
+    if(discVal>0 && fees>0) {
+      discPrev.textContent = `🏷 Discount: ${discType==='percent'?discVal+'%':'₹'+discVal.toLocaleString('en-IN')} → ₹${discAmt.toLocaleString('en-IN')} off`;
+      discPrev.classList.remove('hidden');
+    } else {
+      discPrev.classList.add('hidden');
+    }
+  }
+  if(netDisp) {
+    if(fees>0) {
+      netDisp.textContent = `✅ Net Fee: ₹${netFee.toLocaleString('en-IN')}${discAmt>0?' (after discount)':''}`;
+      netDisp.classList.remove('hidden');
+    } else {
+      netDisp.textContent = '🆓 Free Course';
+      netDisp.classList.remove('hidden');
+    }
+  }
+};
+
+// ── MANAGE FREE COURSE SELF-ENROLL PERMISSIONS ────────────────
+window.manageFreeCourseEnroll = async (courseId) => {
+  const course = allCourses.find(c=>c.id===courseId);
+  if(!course) return;
+  // Get all students
+  const studSnap = await getDocs(query(collection(db,'users'),where('role','==','student'),where('isActive','==',true)));
+  const students = studSnap.docs.map(d=>({id:d.id,...d.data()}));
+  // Get current allowed students for this course
+  const allowedSnap = await getDocs(query(collection(db,'freeEnrollPermissions'),where('courseId','==',courseId)));
+  const allowedIds = new Set(allowedSnap.docs.map(d=>d.data().studentId));
+  const enrolledSnap = await getDocs(query(collection(db,'enrollments'),where('courseId','==',courseId)));
+  const enrolledIds = new Set(enrolledSnap.docs.map(d=>d.data().studentId));
+
+  showModal(`
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(110,231,183,0.1);border:1px solid rgba(110,231,183,0.2)"><span class="text-xl">🟢</span></div>
+      <div><h3 class="text-base font-display font-bold text-white">Free Course — Self-Enroll</h3><p class="text-slate-500 text-xs">${course.name}</p></div>
+    </div>
+    <p class="text-slate-400 text-xs mb-3">Select students who can self-enroll in this free course. They will see an "Enroll" button in the Student app.</p>
+    <input id="freeStuSearch" oninput="filterFreeStudentList()" class="inp mb-3" placeholder="🔍 Search students..."/>
+    <div id="freeStudentList" class="space-y-1.5 max-h-64 overflow-y-auto">
+      ${students.map(s=>{
+        const isAllowed = allowedIds.has(s.id);
+        const isEnrolled = enrolledIds.has(s.id);
+        return `<div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/50 freestu-row" data-name="${(s.name||'').toLowerCase()}">
+          <div class="flex-1 min-w-0">
+            <p class="text-white text-xs font-semibold truncate">${s.name}</p>
+            <p class="text-slate-500 text-xs mono">${s.userId}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            ${isEnrolled?'<span class="badge ba text-xs">✓ Enrolled</span>':''}
+            <button onclick="toggleFreeEnroll('${s.id}','${courseId}',${isAllowed},this)" 
+              class="btn text-xs ${isAllowed?'ba':'bv'}" style="min-width:80px">
+              ${isAllowed?'✓ Allowed':'Allow'}
+            </button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button onclick="closeModal()" class="btn bs w-full justify-center mt-4">Done</button>`);
+};
+
+window.filterFreeStudentList = () => {
+  const q = document.getElementById('freeStuSearch')?.value.toLowerCase()||'';
+  document.querySelectorAll('.freestu-row').forEach(row=>{
+    row.style.display = row.dataset.name?.includes(q)?'':'none';
+  });
+};
+
+window.toggleFreeEnroll = async (studentId, courseId, isCurrentlyAllowed, btn) => {
+  btn.disabled = true;
+  try {
+    if(isCurrentlyAllowed){
+      // Remove permission
+      const snap = await getDocs(query(collection(db,'freeEnrollPermissions'),where('studentId','==',studentId),where('courseId','==',courseId)));
+      for(const d of snap.docs) await deleteDoc(doc(db,'freeEnrollPermissions',d.id));
+      btn.textContent='Allow'; btn.className='btn bv text-xs'; btn.style.minWidth='80px';
+      btn.setAttribute('onclick',`toggleFreeEnroll('${studentId}','${courseId}',false,this)`);
+      toast('Permission removed','info');
+    } else {
+      // Grant permission
+      const stuDoc = await getDoc(doc(db,'users',studentId));
+      const s = stuDoc.data()||{};
+      await addDoc(collection(db,'freeEnrollPermissions'),{
+        studentId, studentName:s.name||studentId, courseId,
+        grantedAt:serverTimestamp(), grantedBy:session.userId
+      });
+      btn.textContent='✓ Allowed'; btn.className='btn ba text-xs'; btn.style.minWidth='80px';
+      btn.setAttribute('onclick',`toggleFreeEnroll('${studentId}','${courseId}',true,this)`);
+      toast('Permission granted!','success');
+    }
+  } catch(e){ console.error(e); toast('Error','error'); }
+  btn.disabled = false;
+};
+
+// Also add "Allow Free Enroll" to student action buttons handler
+window.allowStudentFreeEnrollModal = async (studentId, studentName) => {
+  const freeCoursesSnap = await getDocs(query(collection(db,'courses')));
+  const freeCourses = freeCoursesSnap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!(c.fees>0)&&c.selfEnrollEnabled);
+  if(!freeCourses.length){ toast('No free self-enroll courses available','info'); return; }
+  const permSnap = await getDocs(query(collection(db,'freeEnrollPermissions'),where('studentId','==',studentId)));
+  const allowedCourses = new Set(permSnap.docs.map(d=>d.data().courseId));
+  showModal(`
+    <h3 class="text-base font-display font-bold text-white mb-1">Free Course Permissions</h3>
+    <p class="text-slate-500 text-xs mb-4">${studentName} · Allow which free courses they can self-enroll in</p>
+    <div class="space-y-2">
+    ${freeCourses.map(c=>{
+      const isAllowed = allowedCourses.has(c.id);
+      return `<div class="flex items-center justify-between p-3 gc">
+        <div><p class="text-white text-xs font-semibold">${c.name}</p><p class="text-slate-500 text-xs">${c.category||''}</p></div>
+        <button onclick="toggleFreeEnroll('${studentId}','${c.id}',${isAllowed},this)" class="btn text-xs ${isAllowed?'ba':'bv'}" style="min-width:80px">${isAllowed?'✓ Allowed':'Allow'}</button>
+      </div>`;
+    }).join('')}
+    </div>
+    <button onclick="closeModal()" class="btn bs w-full justify-center mt-4">Done</button>`);
+};
+
+// ── SPECIAL / FORCE OFFER ─────────────────────────────────────
+window.sendSpecialOffer = async (studentId, studentName) => {
+  const cSnap = await getDocs(collection(db,'courses'));
+  const courses = cSnap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.fees>0); // only paid courses
+  const today = new Date().toISOString().split('T')[0];
+  const defExpiry = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+
+  if(!courses.length){ toast('No paid courses available to offer','info'); return; }
+
+  const cOpts = courses.map(c=>`<option value="${c.id}" data-fee="${c.fees||0}" data-net="${c.netFee||c.fees||0}" data-name="${c.name.replace(/"/g,'')}">${c.name} (₹${c.netFee||c.fees||0})</option>`).join('');
+
+  showModal(`
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style="background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(251,113,133,0.2))">🎁</div>
+      <div>
+        <h3 class="text-lg font-bold text-white">Special Offer</h3>
+        <p class="text-slate-500 text-xs">Student: <span class="text-yellow-400 font-semibold">${studentName}</span></p>
+      </div>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="lbl">Select Course *</label>
+        <select id="ofCourse" class="inp" onchange="updateOfferPreview()">
+          <option value="">— Choose Course —</option>${cOpts}
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Original Price</label>
+        <div id="ofOrigPrice" class="inp opacity-60 text-slate-400" style="cursor:default">Select a course first</div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Discount Type *</label>
+          <select id="ofDiscType" class="inp" onchange="updateOfferPreview()">
+            <option value="percent">% Percentage</option>
+            <option value="amount">₹ Fixed Amount</option>
+            <option value="free">🎁 Make it FREE</option>
+          </select>
+        </div>
+        <div id="ofDiscValBox">
+          <label class="lbl">Discount Value *</label>
+          <input id="ofDiscVal" class="inp" type="number" min="0" placeholder="e.g. 20" oninput="updateOfferPreview()"/>
+        </div>
+      </div>
+      <div id="offerPreviewBox" class="hidden p-3 rounded-xl text-center" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2)">
+        <p class="text-slate-400 text-xs mb-1">Student will pay</p>
+        <p id="ofFinalPrice" class="text-yellow-400 text-2xl font-bold">₹0</p>
+        <p id="ofSaving" class="text-emerald-400 text-xs mt-1"></p>
+      </div>
+      <div>
+        <label class="lbl">Personal Message to Student *</label>
+        <textarea id="ofMsg" class="inp" rows="2" placeholder="e.g. Aapke liye special offer! Jaldi enroll karein..."></textarea>
+      </div>
+      <div>
+        <label class="lbl">Offer Valid Until *</label>
+        <input id="ofExpiry" class="inp" type="date" value="${defExpiry}" min="${today}"/>
+      </div>
+    </div>
+    <button onclick="confirmSendOffer('${studentId}','${studentName}')" class="btn w-full justify-center mt-5" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;font-weight:700">🎁 Send Offer to Student</button>
+  `);
+};
+
+window.updateOfferPreview = () => {
+  const sel = document.getElementById('ofCourse');
+  const opt = sel.options[sel.selectedIndex];
+  const origFee = parseFloat(opt?.dataset.fee)||0;
+  const netFee = parseFloat(opt?.dataset.net)||0;
+  const discType = document.getElementById('ofDiscType')?.value;
+  const discValBox = document.getElementById('ofDiscValBox');
+  const previewBox = document.getElementById('offerPreviewBox');
+  const origEl = document.getElementById('ofOrigPrice');
+
+  if(!sel.value){ if(origEl) origEl.textContent='Select a course first'; return; }
+  if(origEl) origEl.textContent = `₹${netFee.toLocaleString('en-IN')}`;
+
+  if(discType==='free'){
+    if(discValBox) discValBox.style.display='none';
+    if(previewBox){ previewBox.classList.remove('hidden'); document.getElementById('ofFinalPrice').textContent='FREE'; document.getElementById('ofSaving').textContent=`Saving ₹${netFee.toLocaleString('en-IN')} (100%)`; }
+    return;
+  }
+  if(discValBox) discValBox.style.display='';
+  const discVal = parseFloat(document.getElementById('ofDiscVal')?.value)||0;
+  if(!discVal){ previewBox?.classList.add('hidden'); return; }
+  let finalFee = netFee;
+  let saving = 0;
+  if(discType==='percent'){ saving=Math.round(netFee*(discVal/100)); finalFee=Math.max(0,netFee-saving); }
+  else { saving=discVal; finalFee=Math.max(0,netFee-discVal); }
+  if(previewBox) previewBox.classList.remove('hidden');
+  document.getElementById('ofFinalPrice').textContent = finalFee===0?'FREE':'₹'+finalFee.toLocaleString('en-IN');
+  document.getElementById('ofSaving').textContent = `Saving ₹${saving.toLocaleString('en-IN')}${discType==='percent'?' ('+discVal+'%)':''}`;
+};
+
+window.confirmSendOffer = async (studentId, studentName) => {
+  const sel = document.getElementById('ofCourse');
+  const opt = sel.options[sel.selectedIndex];
+  const courseId = sel.value;
+  const courseName = opt?.dataset.name||'';
+  const origFee = parseFloat(opt?.dataset.fee)||0;
+  const netFee = parseFloat(opt?.dataset.net)||0;
+  const discType = document.getElementById('ofDiscType').value;
+  const discVal = parseFloat(document.getElementById('ofDiscVal')?.value)||0;
+  const msg = document.getElementById('ofMsg').value.trim();
+  const expiry = document.getElementById('ofExpiry').value;
+
+  if(!courseId) return toast('Select a course','error');
+  if(!msg) return toast('Message required','error');
+  if(!expiry) return toast('Expiry date required','error');
+  if(discType!=='free' && !discVal) return toast('Discount value required','error');
+
+  let finalFee = netFee;
+  if(discType==='free') finalFee=0;
+  else if(discType==='percent') finalFee=Math.max(0,netFee-Math.round(netFee*(discVal/100)));
+  else finalFee=Math.max(0,netFee-discVal);
+
+  // Check existing pending offer for same course+student
+  const existing = await getDocs(query(collection(db,'specialOffers'),where('studentId','==',studentId),where('courseId','==',courseId),where('status','==','pending')));
+  if(!existing.empty){
+    if(!confirm('This student already has a pending offer for this course. Send a new one anyway?')) return;
+    // Expire old ones
+    for(const d of existing.docs) await updateDoc(d.ref,{status:'replaced',updatedAt:serverTimestamp()});
+  }
+
+  await addDoc(collection(db,'specialOffers'),{
+    studentId, studentName, courseId, courseName,
+    originalFee: origFee, discountType: discType,
+    discountValue: discType==='free'?100:discVal,
+    finalFee, message: msg, validUntil: expiry,
+    status:'pending', createdAt:serverTimestamp(), createdBy:'admin'
+  });
+  closeModal();
+  toast(`🎁 Offer sent to ${studentName}!`,'success');
+};
+
+// View all offers sent by admin
+window.viewAllOffers = async () => {
+  const snap = await getDocs(query(collection(db,'specialOffers'), orderBy('createdAt','desc')));
+  const offers = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const today = new Date().toISOString().split('T')[0];
+  showModal(`
+    <h3 class="text-lg font-bold text-white mb-4">🎁 All Special Offers</h3>
+    <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+    ${!offers.length ? '<p class="text-slate-600 text-center py-6">No offers sent yet</p>' :
+      offers.map(o=>{
+        const isExpired = o.validUntil < today;
+        const statusClr = {pending:'text-yellow-400',accepted:'text-emerald-400',expired:'text-red-400',replaced:'text-slate-500'}[o.status]||'text-slate-400';
+        const statusIcon = {pending:'⏳',accepted:'✅',expired:'⛔',replaced:'🔄'}[o.status]||'•';
+        return `<div class="p-3 rounded-xl" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <p class="text-white text-xs font-semibold">${o.studentName} → ${o.courseName}</p>
+              <p class="text-slate-500 text-xs mt-0.5">₹${o.originalFee} → <span class="text-yellow-400 font-bold">${o.finalFee===0?'FREE':'₹'+o.finalFee}</span> · Exp: ${o.validUntil}</p>
+              <p class="text-slate-600 text-xs italic mt-0.5 truncate">"${o.message}"</p>
+            </div>
+            <div class="flex flex-col items-end gap-1 flex-shrink-0">
+              <span class="${statusClr} text-xs font-semibold">${statusIcon} ${o.status}</span>
+              ${o.status==='pending'&&!isExpired?`<button onclick="cancelOffer('${o.id}')" class="btn bd text-xs">Cancel</button>`:''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button onclick="closeModal()" class="btn bs w-full justify-center mt-4">Close</button>`);
+};
+
+window.cancelOffer = async (offerId) => {
+  if(!confirm('Cancel this offer?')) return;
+  await updateDoc(doc(db,'specialOffers',offerId),{status:'cancelled',updatedAt:serverTimestamp()});
+  toast('Offer cancelled','success');
+  closeModal();
+  setTimeout(viewAllOffers,300);
 };
 
 initApp();
