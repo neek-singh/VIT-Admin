@@ -1,0 +1,219 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+    function isRole(r) {
+      return isAuth() && userDoc().role == r;
+    }
+    function isAdmin()   { return isRole('admin'); }
+    function isTeacher() { return isRole('teacher'); }
+    function isStudent() { return isRole('student'); }
+    function isActive()  { return isAuth() && userDoc().isActive == true; }
+
+    // ── Deny all by default ───────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ── Users collection ─────────────────────────────
+    match /users/{userId} {
+      // Read: own profile OR admin/teacher
+      allow read: if isAuth() && isActive() &&
+        (uid() == userId || isAdmin() || isTeacher());
+      // Create: admin only
+      allow create: if isAdmin() && isActive();
+      // Update own profile (cannot change role/isActive)
+      allow update: if isAuth() && isActive() && uid() == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role','isActive','userId']);
+      // Admin can update any user
+      allow update: if isAdmin() && isActive();
+    }
+
+    // ── Counters (for atomic ID generation) ──────────
+    match /counters/{counterId} {
+      allow read, write: if isAdmin() && isActive();
+    }
+
+    // ── Courses ───────────────────────────────────────
+    match /courses/{courseId} {
+      allow read: if isAuth() && isActive();
+      allow create, update: if (isAdmin() || isTeacher()) && isActive();
+      allow delete: if isAdmin() && isActive();
+    }
+
+    // ── Enrollments ───────────────────────────────────
+    match /enrollments/{enrollId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create: if isAdmin() && isActive();
+      allow delete: if isAdmin() && isActive();
+    }
+
+    // ── Fees ─────────────────────────────────────────
+    match /fees/{feeId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || resource.data.studentId == uid());
+      allow create, update: if isAdmin() && isActive();
+    }
+
+    // ── Attendance ────────────────────────────────────
+    match /attendance/{attId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /batchAttendance/{attId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Tests / Results ───────────────────────────────
+    match /tests/{testId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create, update: if (isAdmin() || isTeacher()) && isActive();
+      allow delete: if isTeacher() && isActive() && resource.data.teacherId == uid();
+    }
+    match /results/{resultId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create, update: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Homeworks ─────────────────────────────────────
+    match /homeworks/{hwId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /hwSubmissions/{subId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create: if isStudent() && isActive() &&
+        request.resource.data.studentId == uid();
+      allow update: if isAdmin() && isActive();
+    }
+
+    // ── Materials / Schedule ──────────────────────────
+    match /materials/{matId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /schedule/{schedId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Playlists / Videos ────────────────────────────
+    match /playlists/{plId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /playlistVideos/{vidId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Exams & Attempts ──────────────────────────────
+    match /onlineExams/{examId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /examAttempts/{attemptId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create: if isStudent() && isActive() &&
+        request.resource.data.studentId == uid();
+    }
+
+    // ── Batches ───────────────────────────────────────
+    match /batches/{batchId} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /batchEnrollments/{id} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Curriculum ────────────────────────────────────
+    match /curriculumUnits/{id} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /curriculumLessons/{id} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+    match /curriculumSubTopics/{id} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Notifications ─────────────────────────────────
+    match /notifications/{notifId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || resource.data.to == uid() || resource.data.to == 'admin');
+      allow create: if isAuth() && isActive();
+      allow update: if isAuth() && isActive() &&
+        (isAdmin() || resource.data.to == uid());
+      allow delete: if isAdmin() && isActive();
+    }
+
+    // ── Special Offers ────────────────────────────────
+    match /specialOffers/{offerId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || resource.data.studentId == uid());
+      allow create, update: if isAdmin() && isActive();
+      allow update: if isStudent() && isActive() &&
+        resource.data.studentId == uid() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status','acceptedAt','acceptedByStudent']);
+    }
+
+    // ── Admission Queries ─────────────────────────────
+    match /admissionQueries/{queryId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || resource.data.studentId == uid() || resource.data.userId == uid());
+      allow create: if true; // anyone can submit admission query
+      allow update: if isAdmin() && isActive();
+    }
+
+    // ── Certificates ──────────────────────────────────
+    match /certificates/{certId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || isTeacher() || resource.data.studentId == uid());
+      allow create, update, delete: if (isAdmin() || isTeacher()) && isActive();
+    }
+
+    // ── Payments ─────────────────────────────────────
+    match /payments/{payId} {
+      allow read: if isAuth() && isActive() &&
+        (isAdmin() || resource.data.studentId == uid());
+      allow create, update: if isAdmin() && isActive();
+    }
+
+    // ── Free Enroll Permissions ───────────────────────
+    match /freeEnrollPermissions/{id} {
+      allow read: if isAuth() && isActive();
+      allow create, update, delete: if isAdmin() && isActive();
+    }
+
+    // ── Self-enroll (student-initiated) ───────────────
+    match /enrollments/{enrollId} {
+      allow create: if isStudent() && isActive() &&
+        request.resource.data.studentId == uid() &&
+        request.resource.data.enrolledBy == 'student-self';
+    }
+  }
+}

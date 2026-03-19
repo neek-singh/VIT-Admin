@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {"collectionGroup":"homeworks","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"}]},
+    {"collectionGroup":"homeworks","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"},{"fieldPath":"isActive","order":"ASCENDING"}]},
+    {"collectionGroup":"attendance","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"date","order":"ASCENDING"}]},
+    {"collectionGroup":"attendance","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"courseId","order":"ASCENDING"}]},
+    {"collectionGroup":"attendance","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"date","order":"ASCENDING"},{"fieldPath":"studentId","order":"ASCENDING"}]},
+    {"collectionGroup":"tests","queryScope":"COLLECTION","fields":[{"fieldPath":"teacherId","order":"ASCENDING"},{"fieldPath":"type","order":"ASCENDING"}]},
+    {"collectionGroup":"tests","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"courseId","order":"ASCENDING"}]},
+    {"collectionGroup":"tests","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"},{"fieldPath":"type","order":"ASCENDING"}]},
+    {"collectionGroup":"specialOffers","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"status","order":"ASCENDING"}]},
+    {"collectionGroup":"specialOffers","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"courseId","order":"ASCENDING"}]},
+    {"collectionGroup":"materials","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"}]},
+    {"collectionGroup":"schedule","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"}]},
+    {"collectionGroup":"hwSubmissions","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"courseId","order":"ASCENDING"}]},
+    {"collectionGroup":"hwSubmissions","queryScope":"COLLECTION","fields":[{"fieldPath":"hwId","order":"ASCENDING"},{"fieldPath":"studentId","order":"ASCENDING"}]},
+    {"collectionGroup":"notifications","queryScope":"COLLECTION","fields":[{"fieldPath":"to","order":"ASCENDING"},{"fieldPath":"read","order":"ASCENDING"}]},
+    {"collectionGroup":"notifications","queryScope":"COLLECTION","fields":[{"fieldPath":"targetStudentId","order":"ASCENDING"},{"fieldPath":"read","order":"ASCENDING"}]},
+    {"collectionGroup":"examAttempts","queryScope":"COLLECTION","fields":[{"fieldPath":"examId","order":"ASCENDING"},{"fieldPath":"studentId","order":"ASCENDING"}]},
+    {"collectionGroup":"playlists","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"visibility","order":"ASCENDING"}]},
+    {"collectionGroup":"certificates","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"}]},
+    {"collectionGroup":"enrollments","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"courseId","order":"ASCENDING"}]},
+    {"collectionGroup":"batchEnrollments","queryScope":"COLLECTION","fields":[{"fieldPath":"batchId","order":"ASCENDING"},{"fieldPath":"studentId","order":"ASCENDING"}]},
+    {"collectionGroup":"curriculumLessons","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"moduleId","order":"ASCENDING"}]},
+    {"collectionGroup":"curriculumUnits","queryScope":"COLLECTION","fields":[{"fieldPath":"courseId","order":"ASCENDING"},{"fieldPath":"teacherId","order":"ASCENDING"}]},
+    {"collectionGroup":"feeRecords","queryScope":"COLLECTION","fields":[{"fieldPath":"studentId","order":"ASCENDING"},{"fieldPath":"status","order":"ASCENDING"}]}
+  ],
+  "fieldOverrides": []
+}

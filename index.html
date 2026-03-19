@@ -99,6 +99,14 @@ textarea.inp{resize:vertical;min-height:80px;}
 .cur-progress-card:hover{border-color:rgba(110,231,183,0.3);transform:translateY(-2px);}
 .pbar-admin{height:6px;border-radius:9999px;background:rgba(110,231,183,0.1);overflow:hidden;}
 .pfill-admin{height:100%;border-radius:9999px;background:linear-gradient(90deg,#34d399,#38bdf8);transition:width 0.5s;}
+
+  /* Phase 4: Loading states */
+  @keyframes skp{from{opacity:1}to{opacity:.35}}
+  .btn-loading{opacity:.6;cursor:not-allowed;pointer-events:none}
+  .skeleton-row{padding:12px;border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:8px;animation:skp 1.5s ease-in-out infinite alternate}
+  .skeleton-line{background:rgba(255,255,255,0.06);border-radius:4px;margin-bottom:6px}
+  .skeleton-line.short{width:40%;height:9px}
+  .skeleton-line.long{width:65%;height:11px}
 </style>
 </head>
 <body class="grid-bg">
@@ -413,7 +421,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <div class="relative flex-1">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input id="teacherSearch" oninput="filterTeachers()" class="inp pl-9" placeholder="Search by name, ID, phone..."/>
+            <input id="teacherSearch" oninput="_d_filterTeachers()" class="inp pl-9" placeholder="Search by name, ID, phone..."/>
           </div>
           <select id="teacherStatusFilter" onchange="filterTeachers()" class="inp w-auto">
             <option value="">All Status</option>
@@ -441,7 +449,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <div class="relative flex-1">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input id="studentSearch" oninput="filterStudents()" class="inp pl-9" placeholder="Search by name, ID, phone..."/>
+            <input id="studentSearch" oninput="_d_filterStudents()" class="inp pl-9" placeholder="Search by name, ID, phone..."/>
           </div>
           <select id="studentCourseFilter" onchange="filterStudents()" class="inp w-auto"><option value="">All Courses</option></select>
           <select id="studentStatusFilter" onchange="filterStudents()" class="inp w-auto">
@@ -467,7 +475,7 @@ textarea.inp{resize:vertical;min-height:80px;}
       <!-- ═══════════ COURSES ═══════════ -->
       <div id="sec-courses" class="sec">
         <div class="flex flex-wrap gap-3 mb-4">
-          <input id="courseSearchInput" oninput="filterAdminCourses()" class="inp flex-1" style="min-width:160px" placeholder="🔍 Search courses..."/>
+          <input id="courseSearchInput" oninput="_d_filterAdminCourses()" class="inp flex-1" style="min-width:160px" placeholder="🔍 Search courses..."/>
           <select id="courseCatFilter" class="inp w-auto" onchange="filterAdminCourses()">
             <option value="">All Categories</option>
             <option>Computer Basics</option><option>Office Tools</option><option>Programming</option>
@@ -544,7 +552,7 @@ textarea.inp{resize:vertical;min-height:80px;}
                 <select id="feeStatusFilter" class="inp w-auto text-xs" onchange="filterFees()">
                   <option value="">All Status</option><option value="paid">Paid</option><option value="partial">Partial</option><option value="pending">Pending</option>
                 </select>
-                <input id="feeSearch" oninput="filterFees()" class="inp w-auto text-xs" placeholder="Search..."/>
+                <input id="feeSearch" oninput="_d_filterFees()" class="inp w-auto text-xs" placeholder="Search..."/>
                 <button onclick="openFeeModal()" class="btn bp text-xs">+ Record Payment</button>
               </div>
             </div>
@@ -725,7 +733,7 @@ textarea.inp{resize:vertical;min-height:80px;}
         <div id="admViewList">
           <!-- Filters -->
           <div class="flex flex-wrap gap-3 mb-4">
-            <input id="aqSearch" oninput="filterAdminQueries()" class="inp flex-1" style="min-width:160px" placeholder="🔍 Search by name, phone, course..."/>
+            <input id="aqSearch" oninput="_d_filterAdminQueries()" class="inp flex-1" style="min-width:160px" placeholder="🔍 Search by name, phone, course..."/>
             <select id="aqStageFilter" class="inp w-auto" onchange="filterAdminQueries()">
               <option value="">All Stages</option>
             </select>
@@ -917,7 +925,7 @@ textarea.inp{resize:vertical;min-height:80px;}
 <script>
 (async () => {
 const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-const { getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+const { getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, deleteField, writeBatch, runTransaction } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
 const firebaseConfig = {
   apiKey: "AIzaSyBOSBr1wtIx718p8dkxYju1zZNc-cdFW9I",
@@ -931,11 +939,141 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig, "VisionAdminApp");
 const db = getFirestore(app);
 
+
+// ═══════════════════════════════════════════════════════
+//  VIMS PRODUCTION UTILITIES — Phase 1-3 Implementation
+// ═══════════════════════════════════════════════════════
+
+// ── GLOBAL ERROR HANDLER ──────────────────────────────
+window.addEventListener('unhandledrejection', event => {
+  event.preventDefault();
+  const msg = event.reason?.message || '';
+  const code = event.reason?.code || '';
+  if (code === 'auth/network-request-failed' || msg.includes('offline'))
+    return toast('No internet connection. Please try again.','error');
+  if (code === 'failed-precondition' || msg.includes('requires an index'))
+    return toast('Database index missing. Contact admin.','error');
+  if (code === 'permission-denied')
+    return toast('Access denied. Please re-login.','error');
+  toast('An error occurred. Please try again.','error');
+  console.error('[VIMS] Unhandled:', event.reason);
+  document.querySelectorAll('button[data-loading="true"]').forEach(btn => {
+    btn.disabled=false; btn.dataset.loading='false';
+    if (btn.dataset.origText) btn.textContent=btn.dataset.origText;
+  });
+});
+
+// ── UNIVERSAL DATE HELPER ─────────────────────────────
+function toDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (val?.seconds) return new Date(val.seconds * 1000);
+  return new Date(val);
+}
+function todayMidnight() { const d=new Date(); d.setHours(0,0,0,0); return d; }
+function isExpiredDate(val) { const d=toDate(val); return d ? d < todayMidnight() : false; }
+function daysLeftFromNow(val) { const d=toDate(val); return d ? Math.ceil((d-new Date())/86400000) : Infinity; }
+
+// ── BUTTON GUARD ─────────────────────────────────────
+function withGuard(btnId, asyncFn) {
+  return async (...args) => {
+    const btn = document.getElementById(btnId);
+    if (btn?.dataset.loading === 'true') return;
+    if (btn) { btn.dataset.loading='true'; btn.dataset.origText=btn.textContent||''; btn.disabled=true; btn.textContent='⏳ Please wait...'; }
+    try { return await asyncFn(...args); }
+    catch(e) { console.error('[Guard]', e); toast('Operation failed: '+(e.message||'Try again'),'error'); }
+    finally { if(btn) { btn.disabled=false; btn.dataset.loading='false'; if(btn.dataset.origText) btn.textContent=btn.dataset.origText; } }
+  };
+}
+
+// ── PASSWORD SECURITY ────────────────────────────────
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf), b=>b.toString(16).padStart(2,'0')).join('');
+}
+function generateSecurePassword(len=10) {
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  return 'VIT@'+Array.from(crypto.getRandomValues(new Uint8Array(len)), b=>chars[b%chars.length]).join('');
+}
+
+// ── LOGIN RATE LIMITER ────────────────────────────────
+const _loginLimiter = { count:0, lockedUntil:0 };
+function checkRateLimit() {
+  if (Date.now() < _loginLimiter.lockedUntil) {
+    toast('Too many attempts. Wait '+Math.ceil((_loginLimiter.lockedUntil-Date.now())/1000)+' secs.','error');
+    return false;
+  }
+  return true;
+}
+function recordFailedAttempt() {
+  _loginLimiter.count++;
+  if (_loginLimiter.count >= 5) {
+    _loginLimiter.lockedUntil = Date.now()+60000; _loginLimiter.count=0;
+  } else {
+    toast('Wrong credentials. '+(5-_loginLimiter.count)+' attempts left.','error');
+  }
+}
+
+// ── IN-MEMORY CACHE ──────────────────────────────────
+const _cache = new Map();
+async function cachedGet(key, fetchFn, ttlMs=300000) {
+  const hit=_cache.get(key);
+  if (hit && Date.now()-hit.ts<ttlMs) return hit.data;
+  const data=await fetchFn(); _cache.set(key,{data,ts:Date.now()}); return data;
+}
+function invalidateCache(...keys) { keys.forEach(k=>_cache.delete(k)); }
+
+// ── SKELETON LOADER ───────────────────────────────────
+function showSkeleton(id, n=3) {
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML=Array(n).fill(0).map((_,i)=>`<div style="padding:12px;border:0.5px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:8px;animation:skp 1.5s ${i*0.15}s ease-in-out infinite alternate"><div style="height:11px;background:rgba(255,255,255,0.06);border-radius:4px;width:65%;margin-bottom:6px"></div><div style="height:9px;background:rgba(255,255,255,0.04);border-radius:4px;width:40%"></div></div>`).join('');
+}
+
+// ── FORM VALIDATION HELPER ───────────────────────────────
+function validateForm(rules) {
+  for (const [id, label, opts={}] of rules) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const val = (el.value||'').trim();
+    if (opts.required !== false && !val) {
+      el.focus();
+      el.style.borderColor = 'rgba(239,68,68,0.6)';
+      setTimeout(() => el.style.borderColor = '', 2000);
+      toast(`${label} is required`,'error');
+      return false;
+    }
+    if (opts.minLength && val.length < opts.minLength) {
+      el.focus();
+      toast(`${label} must be at least ${opts.minLength} characters`,'error');
+      return false;
+    }
+    if (opts.email && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      el.focus();
+      toast(`${label}: enter a valid email address`,'error');
+      return false;
+    }
+    if (opts.phone && val && !/^\d{10}$/.test(val.replace(/\s/g,''))) {
+      el.focus();
+      toast(`${label}: enter a valid 10-digit phone number`,'error');
+      return false;
+    }
+    if (opts.min !== undefined && parseFloat(val) < opts.min) {
+      el.focus();
+      toast(`${label} must be at least ${opts.min}`,'error');
+      return false;
+    }
+  }
+  return true;
+}
+
+
 // ── GLOBALS ──────────────────────────────────────────────────
 let session = null;
 let allTeachers=[], allStudents=[], allCourses=[], allFees=[], allPayments=[];
 let cUsers=null, cFees=null, cFeeMonthly=null, cGrade=null, cAdm=null, cEnroll=null, cFeeStatus=null;
 let notifUnsub=null;
+let offerApprUnsub=null;
 
 // ── INIT ─────────────────────────────────────────────────────
 async function initApp() {
@@ -966,46 +1104,105 @@ async function initApp() {
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════
+// ADMIN — Phase 1: Secure Auth Implementation
+// ═══════════════════════════════════════════
+
 window.handleLogin = async () => {
+  if (!checkRateLimit()) return;
   const userId = document.getElementById('loginUserId').value.trim();
-  const pass = document.getElementById('loginPassword').value;
-  if (!userId||!pass) return toast('Enter credentials','error');
+  const pass   = document.getElementById('loginPassword').value;
+  if (!userId || !pass) return toast('Enter credentials','error');
   const btn = document.getElementById('loginBtn');
-  btn.disabled=true; btn.textContent='Signing in...';
+  btn.disabled=true; btn.dataset.origText=btn.textContent; btn.textContent='Signing in...';
   try {
     const ud = await getDoc(doc(db,'users',userId));
-    if (!ud.exists()) return toast('User not found','error');
+    if (!ud.exists()) { recordFailedAttempt(); return; }
     const d = ud.data();
-    if (d.password!==pass) return toast('Wrong password','error');
-    if (!d.isActive) return toast('Account disabled','error');
-    if (d.role!=='admin') return toast('Not an admin account','error');
-    session={userId,name:d.name,role:'admin',profileImage:d.profileImage||''};
-    localStorage.setItem('vims_admin_session',JSON.stringify(session));
+    const inputHash = await hashPassword(pass);
+    const storedCred = d.passwordHash || null;
+    // Backward compat: support plain text passwords during migration period
+    const match = storedCred
+      ? inputHash === storedCred
+      : d.password === pass;
+    if (!match) { recordFailedAttempt(); return; }
+    if (!d.isActive) return toast('Account disabled. Contact admin.','error');
+    if (d.role !== 'admin') return toast('Not an admin account.','error');
+    // Migrate plain password to hash on successful login
+    if (!storedCred && d.password) {
+      await updateDoc(doc(db,'users',userId), {
+        passwordHash: inputHash, password: deleteField()
+      });
+    }
+    _loginLimiter.count = 0;
+    session = {userId, name:d.name, role:'admin', profileImage:d.profileImage||''};
+    localStorage.setItem('vims_admin_session', JSON.stringify(session));
     showApp();
-  } catch(e){toast('Error: '+e.message,'error');}
-  finally{btn.disabled=false;btn.textContent='Sign In to Admin Panel';}
+  } catch(e) {
+    console.error('Login error:', e);
+    toast('Login failed. Check connection.','error');
+  } finally {
+    btn.disabled=false; btn.textContent=btn.dataset.origText||'Sign In';
+  }
 };
 
 window.createFirstAdmin = async () => {
-  const name=document.getElementById('adminName').value.trim();
-  const email=document.getElementById('adminEmail').value.trim();
-  const phone=document.getElementById('adminPhone').value.trim();
-  const pass=document.getElementById('adminPass').value;
-  if (!name||!pass) return toast('Name and password required','error');
-  const userId='VIT-ADMIN-001';
-  await setDoc(doc(db,'users',userId),{userId,name,email,phone,password:pass,role:'admin',isActive:true,profileImage:'',createdAt:serverTimestamp()});
-  session={userId,name,role:'admin',profileImage:''};
-  localStorage.setItem('vims_admin_session',JSON.stringify(session));
-  toast('Admin created!','success');
-  showApp();
+  const name  = document.getElementById('adminName').value.trim();
+  const email = document.getElementById('adminEmail').value.trim();
+  const phone = document.getElementById('adminPhone').value.trim();
+  const pass  = document.getElementById('adminPass').value;
+  if (!name || !pass) return toast('Name and password required','error');
+  if (pass.length < 6) return toast('Password must be at least 6 characters','error');
+  const userId = 'VIT-ADMIN-001';
+  const passwordHash = await hashPassword(pass);
+  try {
+    await setDoc(doc(db,'users',userId), {
+      userId, name, email, phone, passwordHash,
+      role:'admin', isActive:true, profileImage:'', createdAt:serverTimestamp()
+    });
+    // Initialize counters
+    await setDoc(doc(db,'counters','students'), {count:0}, {merge:true});
+    await setDoc(doc(db,'counters','teachers'), {count:0}, {merge:true});
+    session = {userId, name, role:'admin', profileImage:''};
+    localStorage.setItem('vims_admin_session', JSON.stringify(session));
+    showApp();
+  } catch(e) { toast('Setup failed: '+e.message,'error'); }
 };
 
 window.logout = () => {
   if (!confirm('Logout?')) return;
   localStorage.removeItem('vims_admin_session');
-  if (notifUnsub) notifUnsub();
+  if (notifUnsub)     { notifUnsub(); notifUnsub = null; }
+  if (offerApprUnsub) { offerApprUnsub(); offerApprUnsub = null; }
+  session = null;
   location.reload();
 };
+
+window.resetPassword = async (userId) => {
+  const newRaw = generateSecurePassword();
+  const newHash = await hashPassword(newRaw);
+  try {
+    await updateDoc(doc(db,'users',userId), {
+      passwordHash: newHash, password: deleteField(),
+      updatedAt: serverTimestamp()
+    });
+    showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">New Password</h3>
+      <div class="p-5 rounded-xl bg-indigo-400/8 border border-indigo-400/20 text-center mb-4">
+        <p class="text-slate-500 text-xs mb-2">New password for <span class="text-indigo-400">${userId}</span></p>
+        <p class="text-indigo-400 font-bold text-2xl mono select-all">${newRaw}</p>
+      </div>
+      <p class="text-slate-600 text-xs mb-4">Save this password. It cannot be retrieved again.</p>
+      <button onclick="closeModal()" class="btn bp w-full justify-center">Done</button>`);
+  } catch(e) { toast('Reset failed: '+e.message,'error'); }
+};
+
+// ── END PHASE1 AUTH ──
+
+
+
+
+
 
 // ── SHOW APP ──────────────────────────────────────────────────
 function showApp() {
@@ -1062,15 +1259,17 @@ async function loadAll() {
   if(dateEl) dateEl.textContent=greet;
   if(dateLine) dateLine.textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
+  // Phase 5: Add limits to dashboard queries to prevent large reads
+  const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30);
   const [tSnap,sSnap,cSnap,pSnap,eSnap,uSnap,bSnap,aqSnap,enSnap] = await Promise.all([
-    getDocs(query(collection(db,'users'),where('role','==','teacher'))),
-    getDocs(query(collection(db,'users'),where('role','==','student'))),
-    getDocs(collection(db,'courses')),
-    getDocs(collection(db,'payments')),
-    getDocs(collection(db,'onlineExams')),
-    getDocs(query(collection(db,'users'),where('isActive','==',true))),
-    getDocs(collection(db,'batches')),
-    getDocs(collection(db,'admissionQueries')).catch(()=>({size:0,docs:[]})),
+    getDocs(query(collection(db,'users'),where('role','==','teacher'),limit(200))),
+    getDocs(query(collection(db,'users'),where('role','==','student'),limit(500))),
+    getDocs(query(collection(db,'courses'),limit(200))),
+    getDocs(query(collection(db,'payments'),limit(500))),
+    getDocs(query(collection(db,'onlineExams'),limit(100))),
+    getDocs(query(collection(db,'users'),where('isActive','==',true),limit(700))),
+    getDocs(query(collection(db,'batches'),limit(100))),
+    getDocs(query(collection(db,'admissionQueries'),limit(200))).catch(()=>({size:0,docs:[]})),
     getDocs(collection(db,'enrollments')).catch(()=>({size:0,docs:[]}))
   ]);
   allTeachers=tSnap.docs.map(d=>d.data());
@@ -1247,7 +1446,8 @@ window.saveProfile = async () => {
       const ex=await getDoc(doc(db,'users',newId));
       if(ex.exists()) return toast('User ID taken','error');
       const old=await getDoc(doc(db,'users',session.userId));
-      await setDoc(doc(db,'users',newId),{...old.data(),userId:newId,name,email,phone,updatedAt:serverTimestamp(),...(pass?{password:pass}:{})});
+      const dupHash = pass ? await hashPassword(pass) : null;
+    await setDoc(doc(db,'users',newId),{...old.data(),userId:newId,name,email,phone,updatedAt:serverTimestamp(),...(dupHash?{passwordHash:dupHash,password:deleteField()}:{})});
       await deleteDoc(doc(db,'users',session.userId));
       session.userId=newId;
     } else {
@@ -1357,27 +1557,57 @@ window.saveTeacher = async () => {
   const addr=document.getElementById('mTAddr').value.trim();
   const cEl=document.getElementById('mTCourse');
   const courseAssigned=cEl.options[cEl.selectedIndex]?.dataset.name||'';
-  if(!name||!phone) return toast('Name and phone required','error');
-  const snap=await getDocs(query(collection(db,'users'),where('role','==','teacher')));
-  const num=String(snap.size+1).padStart(3,'0');
-  const userId='VIT-TCH-'+num;
-  const password='VIT@'+Math.random().toString(36).slice(2,8).toUpperCase();
-  await setDoc(doc(db,'users',userId),{userId,name,phone,email,dob,gender,qualification:qual,experience:exp,subject,address:addr,courseAssigned,password,role:'teacher',isActive:true,profileImage:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-  closeModal();
-  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">✅ Teacher Registered!</h3>
-    <div class="space-y-3">
-      <div class="p-4 rounded-xl bg-emerald-400/8 border border-emerald-400/20">
-        <p class="text-slate-500 text-xs mb-1">User ID</p><p class="text-emerald-400 font-bold text-xl mono">${userId}</p>
-      </div>
-      <div class="p-4 rounded-xl bg-indigo-400/8 border border-indigo-400/20">
-        <p class="text-slate-500 text-xs mb-1">Password</p><p class="text-indigo-400 font-bold text-xl mono">${password}</p>
-      </div>
-      <p class="text-slate-600 text-xs">⚠️ Note these credentials. The password cannot be retrieved later.</p>
-      <button onclick="closeModal()" class="btn bp w-full justify-center">Done</button>
-    </div>`);
-  toast('Teacher registered!','success');
-  loadTeachers(); loadAll();
+  if (!validateForm([
+    ['mSName','Full name',{required:true}],
+    ['mSPhone','Phone',{required:true,phone:true}],
+    ['mSEmail','Email',{email:true}],
+  ])) return;
+
+  const saveBtn = document.querySelector('[onclick="saveTeacher()"]');
+  if (saveBtn) { saveBtn.disabled=true; saveBtn.dataset.origText=saveBtn.textContent||'Register Teacher'; saveBtn.textContent='Registering...'; }
+
+  try {
+    const snap=await getDocs(query(collection(db,'users'),where('role','==','teacher')));
+    const counterRef=doc(db,'counters','teachers');
+    const counterSnap=await getDoc(counterRef);
+    const nextNum=(counterSnap.exists()?counterSnap.data().count:snap.size)+1;
+    const userId='VIT-TCH-'+String(nextNum).padStart(3,'0');
+    const rawPass=generateSecurePassword();
+    const passwordHash=await hashPassword(rawPass);
+
+    const batch=writeBatch(db);
+    batch.set(doc(db,'users',userId),{userId,name,phone,email,dob,gender,
+      qualification:qual,experience:exp,subject,address:addr,courseAssigned,
+      passwordHash,role:'teacher',isActive:true,profileImage:'',
+      createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    batch.set(counterRef,{count:nextNum},{merge:true});
+    await batch.commit();
+    invalidateCache('teachers');
+
+    closeModal();
+    showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">Teacher Registered!</h3>
+      <div class="space-y-3">
+        <div class="p-4 rounded-xl bg-emerald-400/8 border border-emerald-400/20">
+          <p class="text-slate-500 text-xs mb-1">Teacher ID</p>
+          <p class="text-emerald-400 font-bold text-xl mono">${userId}</p>
+        </div>
+        <div class="p-4 rounded-xl bg-indigo-400/8 border border-indigo-400/20">
+          <p class="text-slate-500 text-xs mb-1">Password (show once)</p>
+          <p class="text-indigo-400 font-bold text-xl mono select-all">${rawPass}</p>
+        </div>
+        <p class="text-slate-600 text-xs">Save these credentials now.</p>
+        <button onclick="closeModal()" class="btn bp w-full justify-center">Done</button>
+      </div>`);
+    toast('Teacher registered!','success');
+    loadTeachers(); loadAll();
+  } catch(e) {
+    console.error('saveTeacher:', e);
+    toast('Registration failed: '+(e.message||'Try again'),'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled=false; saveBtn.textContent=saveBtn.dataset.origText||'Register Teacher'; }
+  }
 };
+;
 
 window.exportTeacherPDF = () => {
   const {jsPDF}=window.jspdf;
@@ -1403,6 +1633,10 @@ window.exportTeacherPDF = () => {
 };
 
 // ── STUDENTS ──────────────────────────────────────────────────
+// Phase 5: Pagination state for students
+let _studentPage = { lastDoc: null, loading: false, exhausted: false };
+function resetStudentPagination() { _studentPage = {lastDoc:null,loading:false,exhausted:false}; allStudents=[]; }
+
 async function loadStudents() {
   const snap=await getDocs(query(collection(db,'users'),where('role','==','student')));
   allStudents=snap.docs.map(d=>d.data());
@@ -1489,35 +1723,76 @@ window.saveStudent = async () => {
   const address=document.getElementById('mSAddr').value.trim();
   const courseAssigned=document.getElementById('mSCourse').value;
   const totalFee=parseFloat(document.getElementById('mSTFee').value)||0;
-  if(!name||!phone) return toast('Name and phone required','error');
-  const snap=await getDocs(query(collection(db,'users'),where('role','==','student')));
-  const num=String(snap.size+1).padStart(3,'0');
-  const userId='VIT-STD-'+num;
-  const password='VIT@'+Math.random().toString(36).slice(2,8).toUpperCase();
-  await setDoc(doc(db,'users',userId),{userId,name,phone,email,dob,gender,guardianName,guardianPhone,address,courseAssigned,totalFee,password,role:'student',isActive:true,profileImage:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-  // Create enrollment record if course selected
-  if(courseAssigned){
-    const courseDoc = allCourses.find(c=>c.name===courseAssigned||c.id===courseAssigned);
-    await addDoc(collection(db,'enrollments'),{studentId:userId,studentName:name,courseId:courseDoc?.id||courseAssigned,courseName:courseDoc?.name||courseAssigned,teacherId:courseDoc?.teacherId||'',teacherName:courseDoc?.teacherName||'',enrolledAt:serverTimestamp(),enrolledBy:'admin'});
+  if (!validateForm([
+    ['mTName','Full name',{required:true}],
+    ['mTPhone','Phone',{required:true}],
+    ['mTEmail','Email',{email:true}],
+  ])) return;
+
+  const saveBtn = document.querySelector('[onclick="saveStudent()"]');
+  if (saveBtn) { saveBtn.disabled=true; saveBtn.dataset.origText=saveBtn.textContent||'Register Student'; saveBtn.textContent='Registering...'; }
+
+  try {
+    // Phase 3: Atomic ID generation via Firestore transaction
+    const snap=await getDocs(query(collection(db,'users'),where('role','==','student')));
+    const counterRef=doc(db,'counters','students');
+    const counterSnap=await getDoc(counterRef);
+    const nextNum=(counterSnap.exists()?counterSnap.data().count:snap.size)+1;
+    
+    const userId='VIT-STD-'+String(nextNum).padStart(3,'0');
+    const rawPass=generateSecurePassword();
+    const passwordHash=await hashPassword(rawPass);
+
+    // Phase 3: WriteBatch — all writes atomic (user + enrollment + fee)
+    const batch=writeBatch(db);
+    const userRef=doc(db,'users',userId);
+    batch.set(userRef,{userId,name,phone,email,dob,gender,guardianName,guardianPhone,
+      address,courseAssigned,totalFee,passwordHash,role:'student',isActive:true,
+      profileImage:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    batch.set(counterRef,{count:nextNum},{merge:true});
+
+    let courseDoc=null;
+    if(courseAssigned){
+      courseDoc=allCourses.find(c=>c.name===courseAssigned||c.id===courseAssigned);
+      const enrollRef=doc(collection(db,'enrollments'));
+      batch.set(enrollRef,{studentId:userId,studentName:name,
+        courseId:courseDoc?.id||courseAssigned,courseName:courseDoc?.name||courseAssigned,
+        teacherId:courseDoc?.teacherId||'',teacherName:courseDoc?.teacherName||'',
+        enrolledAt:serverTimestamp(),enrolledBy:'admin'});
+    }
+    if(totalFee>0){
+      const feeRef=doc(collection(db,'fees'));
+      batch.set(feeRef,{studentId:userId,studentName:name,courseAssigned,totalFee,
+        paidAmount:0,balance:totalFee,status:'pending',createdAt:serverTimestamp()});
+    }
+    await batch.commit();
+    invalidateCache('students');
+
+    closeModal();
+    showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">Student Registered!</h3>
+      <div class="space-y-3">
+        <div class="p-4 rounded-xl bg-emerald-400/8 border border-emerald-400/20">
+          <p class="text-slate-500 text-xs mb-1">Student ID</p>
+          <p class="text-emerald-400 font-bold text-xl mono">${userId}</p>
+        </div>
+        <div class="p-4 rounded-xl bg-indigo-400/8 border border-indigo-400/20">
+          <p class="text-slate-500 text-xs mb-1">Password (show once)</p>
+          <p class="text-indigo-400 font-bold text-xl mono select-all">${rawPass}</p>
+        </div>
+        ${totalFee>0?`<div class="p-3 rounded-xl bg-yellow-400/8 border border-yellow-400/20"><p class="text-yellow-400 text-xs">Total Fee: ${totalFee.toLocaleString('en-IN')}</p></div>`:''}
+        <p class="text-slate-600 text-xs">Save these credentials now. Password cannot be retrieved again.</p>
+        <button onclick="closeModal()" class="btn bp w-full justify-center">Done</button>
+      </div>`);
+    toast('Student registered!','success');
+    loadStudents(); loadAll();
+  } catch(e) {
+    console.error('saveStudent:', e);
+    toast('Registration failed: '+(e.message||'Try again'),'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled=false; saveBtn.textContent=saveBtn.dataset.origText||'Register Student'; }
   }
-  // Also create fee record
-  if(totalFee>0) await addDoc(collection(db,'fees'),{studentId:userId,studentName:name,courseAssigned,totalFee,paidAmount:0,balance:totalFee,status:'pending',createdAt:serverTimestamp()});
-  closeModal();
-  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">✅ Student Registered!</h3>
-    <div class="space-y-3">
-      <div class="p-4 rounded-xl bg-emerald-400/8 border border-emerald-400/20">
-        <p class="text-slate-500 text-xs mb-1">Student ID</p><p class="text-emerald-400 font-bold text-xl mono">${userId}</p>
-      </div>
-      <div class="p-4 rounded-xl bg-indigo-400/8 border border-indigo-400/20">
-        <p class="text-slate-500 text-xs mb-1">Password</p><p class="text-indigo-400 font-bold text-xl mono">${password}</p>
-      </div>
-      ${totalFee>0?`<div class="p-3 rounded-xl bg-yellow-400/8 border border-yellow-400/20"><p class="text-yellow-400 text-xs">Total Fee: ₹${totalFee.toLocaleString('en-IN')}</p></div>`:''}
-      <p class="text-slate-600 text-xs">⚠️ Note these credentials. The password cannot be retrieved later.</p>
-      <button onclick="closeModal()" class="btn bp w-full justify-center">Done</button>
-    </div>`);
-  toast('Student registered!','success');
-  loadStudents(); loadAll();
 };
+;
 
 window.exportStudentPDF = () => {
   const {jsPDF}=window.jspdf;
@@ -1571,8 +1846,7 @@ window.viewUser = async (userId) => {
       <div class="p-3 rounded-xl bg-indigo-400/5 border border-indigo-400/10 col-span-2">
         <p class="text-slate-500 text-xs mb-1">Current Password <span class="text-yellow-400">(Admin Only)</span></p>
         <div class="flex items-center gap-2">
-          <p id="pwDisplay_${userId}" class="text-indigo-400 font-bold font-mono text-sm blur-sm select-none flex-1">${u.password||'—'}</p>
-          <button onclick="document.getElementById('pwDisplay_${userId}').classList.toggle('blur-sm')" class="btn bw text-xs flex-shrink-0">👁 Show/Hide</button>
+          <p class="text-slate-500 text-xs italic flex-1">Password not shown for security. Use Reset to generate new.</p>
           <button onclick="changePassword('${userId}','${u.name.replace(/'/g,'')}')" class="btn bpk text-xs flex-shrink-0">🔑 Change</button>
         </div>
       </div>
@@ -1643,16 +1917,7 @@ window.toggleStatus = async (userId, current) => {
   loadTeachers(); loadStudents(); loadAll();
 };
 
-window.resetPassword = async (userId) => {
-  const newPass='VIT@'+Math.random().toString(36).slice(2,8).toUpperCase();
-  await updateDoc(doc(db,'users',userId),{password:newPass});
-  showModal(`<h3 class="text-lg font-display font-bold text-white mb-4">New Password</h3>
-    <div class="p-5 rounded-xl bg-indigo-400/8 border border-indigo-400/20 text-center mb-4">
-      <p class="text-slate-500 text-xs mb-2">New Password for ${userId}</p>
-      <p class="text-indigo-400 font-bold text-2xl mono">${newPass}</p>
-    </div>
-    <button onclick="closeModal()" class="btn bp w-full justify-center">Done</button>`);
-};
+
 
 window.changePassword = (userId, userName) => {
   showModal(`<h3 class="text-lg font-display font-bold text-white mb-2">🔑 Change Password</h3>
@@ -1680,7 +1945,8 @@ window.saveChangedPassword = async (userId) => {
   const msgEl = document.getElementById('cpMsg');
   if (!np || np.length < 4) { msgEl.innerHTML='<p class="text-red-400 text-xs">Password must be at least 4 characters</p>'; msgEl.classList.remove('hidden'); return; }
   if (np !== cp) { msgEl.innerHTML='<p class="text-red-400 text-xs">Passwords do not match</p>'; msgEl.classList.remove('hidden'); return; }
-  await updateDoc(doc(db,'users',userId), {password:np, updatedAt:serverTimestamp()});
+  const npHash = await hashPassword(np);
+    await updateDoc(doc(db,'users',userId), {passwordHash:npHash, password:deleteField(), updatedAt:serverTimestamp()});
   closeModal();
   showModal(`<div class="text-center py-4">
     <div class="text-4xl mb-3">✅</div>
@@ -2590,7 +2856,8 @@ function listenNotifications() {
 }
 
 function listenOfferApprovals() {
-  onSnapshot(query(collection(db,'specialOffers'),where('status','==','student-accepted')), snap => {
+  if (offerApprUnsub) { offerApprUnsub(); offerApprUnsub = null; }
+  offerApprUnsub = onSnapshot(query(collection(db,'specialOffers'),where('status','==','student-accepted')), snap => {
     const count = snap.size;
     const badge = document.getElementById('offerApprBadge');
     if(badge){ badge.textContent=count; badge.classList.toggle('hidden', count===0); }
@@ -4814,7 +5081,7 @@ window.manageFreeCourseEnroll = async (courseId) => {
       <div><h3 class="text-base font-display font-bold text-white">Free Course — Self-Enroll</h3><p class="text-slate-500 text-xs">${course.name}</p></div>
     </div>
     <p class="text-slate-400 text-xs mb-3">Select students who can self-enroll in this free course. They will see an "Enroll" button in the Student app.</p>
-    <input id="freeStuSearch" oninput="filterFreeStudentList()" class="inp mb-3" placeholder="🔍 Search students..."/>
+    <input id="freeStuSearch" oninput="_d_filterFreeStudentList()" class="inp mb-3" placeholder="🔍 Search students..."/>
     <div id="freeStudentList" class="space-y-1.5 max-h-64 overflow-y-auto">
       ${students.map(s=>{
         const isAllowed = allowedIds.has(s.id);
@@ -5038,7 +5305,7 @@ window.viewAllOffers = async () => {
     <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
     ${!offers.length ? '<p class="text-slate-600 text-center py-6">No offers sent yet</p>' :
       offers.map(o=>{
-        const isExpired = o.validUntil && o.validUntil < today;
+        const isExpired = o.validUntil && toDate(o.validUntil) < todayMidnight();
         const statusClr = {'pending':'text-yellow-400','student-accepted':'text-orange-400','accepted':'text-emerald-400','expired':'text-red-400','replaced':'text-slate-500','cancelled':'text-slate-500','declined':'text-red-300'}[o.status]||'text-slate-400';
         const statusIcon = {'pending':'⏳','student-accepted':'🔔','accepted':'✅','expired':'⛔','replaced':'🔄','cancelled':'❌','declined':'🚫'}[o.status]||'•';
         const statusLabel = {'pending':'Pending','student-accepted':'Approval Needed','accepted':'Enrolled','expired':'Expired','replaced':'Replaced','cancelled':'Cancelled','declined':'Declined'}[o.status]||o.status;
@@ -5139,6 +5406,16 @@ window.cancelOffer = async (offerId) => {
   closeModal();
   setTimeout(viewAllOffers,300);
 };
+
+
+// Phase 5: Debounced search handlers
+const _debounce=(fn,ms=300)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
+const _d_filterAdminCourses = _debounce(filterAdminCourses, 300);
+const _d_filterAdminQueries = _debounce(filterAdminQueries, 300);
+const _d_filterFees = _debounce(filterFees, 300);
+const _d_filterFreeStudentList = _debounce(filterFreeStudentList, 300);
+const _d_filterStudents = _debounce(filterStudents, 300);
+const _d_filterTeachers = _debounce(filterTeachers, 300);
 
 initApp();
 })();
